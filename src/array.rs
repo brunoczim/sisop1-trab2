@@ -1,4 +1,4 @@
-use core::slice;
+use std::{cmp, slice};
 
 use crate::{Element, ELEMS_IN_PAGE};
 
@@ -14,6 +14,26 @@ impl Array {
 
     pub fn append(&mut self, element: Element) {
         self.elements.push(element);
+    }
+
+    pub fn sort(&mut self) {
+        self.elements.sort();
+    }
+
+    fn binary_search(&self, element: Element) -> Result<usize, usize> {
+        let mut left = 0;
+        let mut right = self.elements.len();
+
+        while left < right {
+            let mid = left + (right - left) / 2;
+            match element.cmp(&self.elements[mid]) {
+                cmp::Ordering::Less => right = mid,
+                cmp::Ordering::Equal => return Ok(mid),
+                cmp::Ordering::Greater => left = mid + 1,
+            }
+        }
+
+        Err(left)
     }
 
     pub fn find_good_local(&self, element: Element) -> bool {
@@ -90,6 +110,10 @@ impl Array {
         false
     }
 
+    pub fn find_sorted(&self, element: Element) -> bool {
+        self.binary_search(element).is_ok()
+    }
+
     pub fn inc_less_than_good_local(&mut self, element: Element) {
         let mut i = 0;
 
@@ -159,6 +183,21 @@ impl Array {
             offset += 1;
         }
     }
+
+    pub fn inc_less_than_sorted(&mut self, element: Element) {
+        let mut index = match self.binary_search(element) {
+            Ok(index) => index,
+            Err(index) => index,
+        };
+
+        while index > 0 && self.elements[index] >= element {
+            index -= 1;
+        }
+
+        for element in &mut self.elements[.. index] {
+            *element = element.wrapping_add(1);
+        }
+    }
 }
 
 impl<'array> IntoIterator for &'array Array {
@@ -206,18 +245,26 @@ mod test {
             array.append((i % 10) as Element);
         }
 
+        let mut sorted_array = array.clone();
+        sorted_array.sort();
+
         assert!(!array.find_good_local(11));
         assert!(!array.find_bad_local(11));
         assert!(!array.find_worse_local(11));
+        assert!(!sorted_array.find_sorted(11));
 
         array.append(11);
         for i in 0 .. ELEMS_IN_PAGE * 128 + ELEMS_IN_PAGE / 2 {
             array.append((i % 10) as Element);
         }
 
+        let mut sorted_array = array.clone();
+        sorted_array.sort();
+
         assert!(array.find_good_local(11));
         assert!(array.find_bad_local(11));
         assert!(array.find_worse_local(11));
+        assert!(sorted_array.find_sorted(11));
     }
 
     #[test]
@@ -238,6 +285,10 @@ mod test {
         let mut worse_array = array.clone();
         worse_array.inc_less_than_good_local(cut_element);
 
+        let mut sorted_array = array.clone();
+        sorted_array.sort();
+        sorted_array.inc_less_than_good_local(cut_element);
+
         let mut good_iter = good_array.into_iter();
         let mut bad_iter = bad_array.into_iter();
         let mut worse_iter = worse_array.into_iter();
@@ -256,5 +307,15 @@ mod test {
         assert_eq!(good_iter.next(), None);
         assert_eq!(bad_iter.next(), None);
         assert_eq!(worse_iter.next(), None);
+
+        assert!(sorted_array
+            .into_iter()
+            .try_fold(None, |maybe_prev, curr| match maybe_prev {
+                Some(prev) if prev <= curr => Some(Some(curr)),
+                Some(_) => None,
+                None => Some(Some(curr)),
+            })
+            .is_some());
+        assert!(sorted_array.into_iter().all(|element| element > 0));
     }
 }
