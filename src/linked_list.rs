@@ -5,6 +5,12 @@ pub struct LinkedList {
     top: Option<Box<Node>>,
 }
 
+impl Default for LinkedList {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
 impl LinkedList {
     pub fn empty() -> Self {
         LinkedList { top: None }

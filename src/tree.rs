@@ -6,6 +6,12 @@ pub struct Tree {
     root: Option<Box<Node>>,
 }
 
+impl Default for Tree {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
 impl Tree {
     pub fn empty() -> Self {
         Self { root: None }

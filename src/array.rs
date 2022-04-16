@@ -7,6 +7,12 @@ pub struct Array {
     elements: Vec<Element>,
 }
 
+impl Default for Array {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
 impl Array {
     pub fn empty() -> Self {
         Self { elements: Vec::new() }
