@@ -69,6 +69,34 @@ impl Drop for LinkedList {
     }
 }
 
+impl<'list> IntoIterator for &'list LinkedList {
+    type Item = Element;
+    type IntoIter = Iter<'list>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter { list: self }
+    }
+}
+
+pub struct Iter<'list> {
+    list: &'list LinkedList,
+}
+
+impl<'list> Iterator for Iter<'list> {
+    type Item = Element;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &self.list.top {
+            Some(node) => {
+                let element = node.data;
+                self.list = &node.next;
+                Some(element)
+            },
+            None => None,
+        }
+    }
+}
+
 #[derive(Debug)]
 struct Node {
     data: Element,

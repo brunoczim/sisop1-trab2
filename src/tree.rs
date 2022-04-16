@@ -156,6 +156,59 @@ impl Drop for Tree {
     }
 }
 
+impl<'tree> IntoIterator for &'tree Tree {
+    type Item = Element;
+    type IntoIter = Iter<'tree>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter {
+            entries: vec![IterEntry {
+                left_processed: false,
+                node: &self.root,
+            }],
+        }
+    }
+}
+
+#[derive(Debug)]
+struct IterEntry<'tree> {
+    left_processed: bool,
+    node: &'tree Option<Box<Node>>,
+}
+
+#[derive(Debug)]
+pub struct Iter<'tree> {
+    entries: Vec<IterEntry<'tree>>,
+}
+
+impl<'tree> Iterator for Iter<'tree> {
+    type Item = Element;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let mut entry = self.entries.pop()?;
+            let node = entry.node.as_ref()?;
+            match &node.left.root {
+                Some(_) if !entry.left_processed => {
+                    entry.left_processed = true;
+                    self.entries.push(entry);
+                    self.entries.push(IterEntry {
+                        left_processed: false,
+                        node: &node.left.root,
+                    });
+                },
+                _ => {
+                    self.entries.push(IterEntry {
+                        left_processed: false,
+                        node: &node.right.root,
+                    });
+                    return Some(node.data);
+                },
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 struct Node {
     data: Element,

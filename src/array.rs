@@ -1,3 +1,5 @@
+use core::slice;
+
 use crate::{Element, ELEMS_IN_PAGE};
 
 #[derive(Debug, Clone)]
@@ -156,5 +158,27 @@ impl Array {
             }
             offset += 1;
         }
+    }
+}
+
+impl<'array> IntoIterator for &'array Array {
+    type Item = Element;
+    type IntoIter = Iter<'array>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter { inner: self.elements.iter() }
+    }
+}
+
+#[derive(Debug)]
+pub struct Iter<'array> {
+    inner: slice::Iter<'array, Element>,
+}
+
+impl<'array> Iterator for Iter<'array> {
+    type Item = Element;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().copied()
     }
 }
