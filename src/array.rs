@@ -182,3 +182,79 @@ impl<'array> Iterator for Iter<'array> {
         self.inner.next().copied()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::Array;
+    use crate::{Element, ELEMS_IN_PAGE};
+
+    #[test]
+    fn iterate() {
+        let mut array = Array::empty();
+        array.append(10);
+        array.append(3);
+        array.append(5);
+        array.append(9);
+        let collected: Vec<_> = array.into_iter().collect();
+        assert_eq!(collected, &[10, 3, 5, 9]);
+    }
+
+    #[test]
+    fn find() {
+        let mut array = Array::empty();
+        for i in 0 .. ELEMS_IN_PAGE * 128 + ELEMS_IN_PAGE / 2 {
+            array.append((i % 10) as Element);
+        }
+
+        assert!(!array.find_good_local(11));
+        assert!(!array.find_bad_local(11));
+        assert!(!array.find_worse_local(11));
+
+        array.append(11);
+        for i in 0 .. ELEMS_IN_PAGE * 128 + ELEMS_IN_PAGE / 2 {
+            array.append((i % 10) as Element);
+        }
+
+        assert!(array.find_good_local(11));
+        assert!(array.find_bad_local(11));
+        assert!(array.find_worse_local(11));
+    }
+
+    #[test]
+    fn inc_less_than() {
+        let cut_element = 5;
+
+        let mut array = Array::empty();
+        for i in 0 .. ELEMS_IN_PAGE * 257 + ELEMS_IN_PAGE / 2 {
+            array.append((i % 10) as Element);
+        }
+
+        let mut good_array = array.clone();
+        good_array.inc_less_than_good_local(cut_element);
+
+        let mut bad_array = array.clone();
+        bad_array.inc_less_than_good_local(cut_element);
+
+        let mut worse_array = array.clone();
+        worse_array.inc_less_than_good_local(cut_element);
+
+        let mut good_iter = good_array.into_iter();
+        let mut bad_iter = bad_array.into_iter();
+        let mut worse_iter = worse_array.into_iter();
+
+        for i in 0 .. ELEMS_IN_PAGE * 257 + ELEMS_IN_PAGE / 2 {
+            let mut expected = (i % 10) as Element;
+            if expected < cut_element {
+                expected += 1;
+            }
+
+            assert_eq!(good_iter.next(), Some(expected));
+            assert_eq!(bad_iter.next(), Some(expected));
+            assert_eq!(worse_iter.next(), Some(expected));
+        }
+
+        assert_eq!(good_iter.next(), None);
+        assert_eq!(bad_iter.next(), None);
+        assert_eq!(worse_iter.next(), None);
+    }
+}

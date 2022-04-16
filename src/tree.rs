@@ -215,3 +215,78 @@ struct Node {
     left: Tree,
     right: Tree,
 }
+
+#[cfg(test)]
+mod test {
+    use super::Tree;
+    use crate::{Element, ELEMS_IN_PAGE};
+
+    #[test]
+    fn iterate() {
+        let mut tree = Tree::empty();
+        tree.insert(10);
+        tree.insert(3);
+        tree.insert(5);
+        tree.insert(9);
+        tree.insert(7);
+        tree.insert(8);
+        tree.insert(6);
+        let collected: Vec<_> = tree.into_iter().collect();
+        assert_eq!(collected, &[3, 5, 6, 7, 8, 9, 10]);
+    }
+
+    #[test]
+    fn find() {
+        let cut_element = (ELEMS_IN_PAGE * 128 + ELEMS_IN_PAGE / 2) as Element;
+
+        let mut tree = Tree::empty();
+        for i in (cut_element + 1 .. cut_element * 2).step_by(2) {
+            tree.insert(i + 1);
+            tree.insert(i);
+        }
+        for i in (0 .. cut_element).step_by(2) {
+            tree.insert(i + 1);
+            tree.insert(i);
+        }
+
+        assert!(!tree.find_with_order(cut_element));
+        assert!(!tree.find_without_order(cut_element));
+
+        tree.insert(cut_element);
+
+        assert!(tree.find_with_order(cut_element));
+        assert!(tree.find_without_order(cut_element));
+    }
+
+    #[test]
+    fn inc_less_than() {
+        let cut_element = (ELEMS_IN_PAGE * 128 + ELEMS_IN_PAGE / 2) as Element;
+
+        let mut tree = Tree::empty();
+        for i in (cut_element .. cut_element * 2).step_by(2) {
+            tree.insert(i + 1);
+            tree.insert(i);
+        }
+        for i in (0 .. cut_element).step_by(2) {
+            tree.insert(i + 1);
+            tree.insert(i);
+        }
+
+        let mut with_order_tree = tree.clone();
+        with_order_tree.inc_less_than_with_order(cut_element);
+
+        let mut without_order_tree = tree.clone();
+        without_order_tree.inc_less_than_without_order(cut_element);
+
+        let mut with_order_iter = with_order_tree.into_iter();
+        let mut without_order_iter = without_order_tree.into_iter();
+
+        for i in 1 .. cut_element * 2 {
+            assert_eq!(with_order_iter.next(), Some(i));
+            assert_eq!(without_order_iter.next(), Some(i));
+        }
+
+        assert_eq!(with_order_iter.next(), None);
+        assert_eq!(without_order_iter.next(), None);
+    }
+}

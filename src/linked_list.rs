@@ -46,15 +46,17 @@ impl LinkedList {
 
 impl Clone for LinkedList {
     fn clone(&self) -> Self {
+        let mut source_list = self;
         let mut new_list = LinkedList::empty();
         let mut new_list_end = &mut new_list.top;
 
-        while let Some(node) = &self.top {
+        while let Some(node) = &source_list.top {
             *new_list_end = Some(Box::new(Node {
                 data: node.data,
                 next: LinkedList::empty(),
             }));
             new_list_end = &mut new_list_end.as_mut().unwrap().next.top;
+            source_list = &node.next;
         }
 
         new_list
@@ -101,4 +103,56 @@ impl<'list> Iterator for Iter<'list> {
 struct Node {
     data: Element,
     next: LinkedList,
+}
+
+#[cfg(test)]
+mod test {
+    use super::LinkedList;
+
+    #[test]
+    fn iterate() {
+        let mut list = LinkedList::empty();
+        list.prepend(10);
+        list.prepend(3);
+        list.prepend(5);
+        list.prepend(9);
+
+        let collected: Vec<_> = list.into_iter().collect();
+        assert_eq!(collected, &[9, 5, 3, 10]);
+
+        let cloned = list.clone();
+
+        let collected: Vec<_> = cloned.into_iter().collect();
+        assert_eq!(collected, &[9, 5, 3, 10]);
+    }
+
+    #[test]
+    fn find() {
+        let mut list = LinkedList::empty();
+        list.prepend(10);
+        list.prepend(3);
+        list.prepend(5);
+        list.prepend(9);
+
+        assert!(list.find(10));
+        assert!(list.find(3));
+        assert!(list.find(5));
+        assert!(list.find(9));
+        assert!(!list.find(11));
+    }
+
+    #[test]
+    fn inc_less_than() {
+        let mut list = LinkedList::empty();
+        list.prepend(10);
+        list.prepend(3);
+        list.prepend(5);
+        list.prepend(9);
+
+        let cut_element = 7;
+        list.inc_less_than(cut_element);
+
+        let collected: Vec<_> = list.into_iter().collect();
+        assert_eq!(collected, &[9, 6, 4, 10]);
+    }
 }
