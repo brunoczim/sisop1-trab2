@@ -11,7 +11,7 @@ use std::{
     error::Error,
     fmt,
     fs,
-    io,
+    io::{self, Seek},
     mem,
     path::PathBuf,
     process,
@@ -23,13 +23,12 @@ use tree::Tree;
 type Element = u64;
 
 const ELEMS_IN_PAGE: usize = 0x1000 / mem::size_of::<Element>();
-const SIZES: [usize; 6] = [
+const SIZES: [usize; 5] = [
     ELEMS_IN_PAGE / 16,
     ELEMS_IN_PAGE * 16usize.pow(0),
     ELEMS_IN_PAGE * 16usize.pow(1),
     ELEMS_IN_PAGE * 16usize.pow(2),
     ELEMS_IN_PAGE * 16usize.pow(3),
-    ELEMS_IN_PAGE * 16usize.pow(4),
 ];
 
 #[derive(Debug, Clone, Copy)]
@@ -168,7 +167,7 @@ struct ReportRow<'mode> {
     size: usize,
     operation: Operation,
     variant: Variant,
-    duration: Duration,
+    nanoseconds: u128,
 }
 
 #[derive(Debug, Clone)]
@@ -198,7 +197,7 @@ where
         size: elements.len(),
         operation: Operation::Create,
         variant: Variant::UnsortedArray,
-        duration: elapsed,
+        nanoseconds: elapsed.as_nanos(),
     };
     csv_writer.serialize(row)?;
 
@@ -214,7 +213,7 @@ where
         size: elements.len(),
         operation: Operation::Create,
         variant: Variant::SortedArray,
-        duration: elapsed,
+        nanoseconds: elapsed.as_nanos(),
     };
     csv_writer.serialize(row)?;
 
@@ -229,7 +228,7 @@ where
         size: elements.len(),
         operation: Operation::Create,
         variant: Variant::LinkedList,
-        duration: elapsed,
+        nanoseconds: elapsed.as_nanos(),
     };
     csv_writer.serialize(row)?;
 
@@ -244,7 +243,7 @@ where
         size: elements.len(),
         operation: Operation::Create,
         variant: Variant::Tree,
-        duration: elapsed,
+        nanoseconds: elapsed.as_nanos(),
     };
     csv_writer.serialize(row)?;
 
@@ -271,12 +270,17 @@ where
 
 fn try_main(arguments: &Arguments) -> io::Result<()> {
     let mut rng = StdRng::from_seed(arguments.seed.bytes);
-    let file = fs::OpenOptions::new()
+    let mut file = fs::OpenOptions::new()
         .create(true)
+        .read(false)
+        .write(true)
         .truncate(arguments.truncate)
         .append(!arguments.truncate)
         .open(&arguments.output)?;
-    let mut csv_writer = csv::Writer::from_writer(file);
+
+    let write_headers = file.stream_position()? == 0;
+    let mut csv_writer =
+        csv::WriterBuilder::new().has_headers(write_headers).from_writer(file);
 
     for size in SIZES {
         run_for_size(size, &arguments.mode_name, &mut rng, &mut csv_writer)?;
