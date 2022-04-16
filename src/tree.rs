@@ -82,7 +82,7 @@ impl Tree {
             }
             match &mut this.root {
                 Some(node) => {
-                    this = &mut node.right;
+                    this = &mut node.left;
                 },
                 None => break,
             }
@@ -187,23 +187,24 @@ impl<'tree> Iterator for Iter<'tree> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let mut entry = self.entries.pop()?;
-            let node = entry.node.as_ref()?;
-            match &node.left.root {
-                Some(_) if !entry.left_processed => {
-                    entry.left_processed = true;
-                    self.entries.push(entry);
-                    self.entries.push(IterEntry {
-                        left_processed: false,
-                        node: &node.left.root,
-                    });
-                },
-                _ => {
-                    self.entries.push(IterEntry {
-                        left_processed: false,
-                        node: &node.right.root,
-                    });
-                    return Some(node.data);
-                },
+            if let Some(node) = entry.node.as_ref() {
+                match &node.left.root {
+                    Some(_) if !entry.left_processed => {
+                        entry.left_processed = true;
+                        self.entries.push(entry);
+                        self.entries.push(IterEntry {
+                            left_processed: false,
+                            node: &node.left.root,
+                        });
+                    },
+                    _ => {
+                        self.entries.push(IterEntry {
+                            left_processed: false,
+                            node: &node.right.root,
+                        });
+                        return Some(node.data);
+                    },
+                }
             }
         }
     }
@@ -237,7 +238,7 @@ mod test {
 
     #[test]
     fn find() {
-        let cut_element = (ELEMS_IN_PAGE * 128 + ELEMS_IN_PAGE / 2) as Element;
+        let cut_element = (ELEMS_IN_PAGE * 32 + ELEMS_IN_PAGE / 2) as Element;
 
         let mut tree = Tree::empty();
         for i in (cut_element + 1 .. cut_element * 2).step_by(2) {
@@ -260,7 +261,7 @@ mod test {
 
     #[test]
     fn inc_less_than() {
-        let cut_element = (ELEMS_IN_PAGE * 128 + ELEMS_IN_PAGE / 2) as Element;
+        let cut_element = (ELEMS_IN_PAGE * 32 + ELEMS_IN_PAGE / 2) as Element;
 
         let mut tree = Tree::empty();
         for i in (cut_element .. cut_element * 2).step_by(2) {
