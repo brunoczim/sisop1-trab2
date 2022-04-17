@@ -67,6 +67,9 @@ class Mode(NamedTuple):
     key: str
     name: str
 
+def format_float(number: float) -> str:
+    return f'{number:.3f}'.strip('.0')
+
 def size_formatter(sizes: List[int]) -> Any:
     @ticker.FuncFormatter
     def impl(index: int, pos: Any) -> str:
@@ -74,12 +77,12 @@ def size_formatter(sizes: List[int]) -> Any:
         if size < 1024 ** 1:
             return f'{size} B'
         if size < 1024 ** 2:
-            return f'{size / 1024 ** 1 : .3f} KiB'
+            return f'{format_float(size / 1024 ** 1)} KiB'
         if size < 1024 ** 3:
-            return f'{size / 1024 ** 2 : .3f} MiB'
+            return f'{format_float(size / 1024 ** 2)} MiB'
         if size < 1024 ** 4:
-            return f'{size / 1024 ** 3 : .3f} GiB'
-        return f'{size / 1024 ** 4 : .3f} TiB'
+            return f'{format_float(size / 1024 ** 3)} GiB'
+        return f'{format_float(size / 1024 ** 4)} TiB'
     return impl
 
 @ticker.FuncFormatter
@@ -87,14 +90,14 @@ def time_formatter(nanoseconds: int, pos: Any) -> str:
     if nanoseconds < 1000 ** 1:
         return f'{nanoseconds} ns'
     if nanoseconds < 1000 ** 2:
-        return f'{nanoseconds / 1000 ** 1 : .3f} μs'
+        return f'{format_float(nanoseconds / 1000 ** 1)} μs'
     if nanoseconds < 1000 ** 3:
-        return f'{nanoseconds / 1000 ** 2 : .3f} ms'
-    if nanoseconds < 1000 ** 4:
-        return f'{nanoseconds / 1000 ** 3 : .3f} s'
-    if nanoseconds < 60 * 1000 ** 4:
-        return f'{nanoseconds / 1000 ** 4 : .3f} m'
-    return f'{nanoseconds / 60 * 1024 ** 4 : .3f} h'
+        return f'{format_float(nanoseconds / 1000 ** 2)} ms'
+    if nanoseconds < 1000 ** 3 * 60:
+        return f'{format_float(nanoseconds / 1000 ** 3)} s'
+    if nanoseconds < 1000 ** 3 * 60 * 60:
+        return f'{format_float(nanoseconds / (1000 ** 3 * 60))} m'
+    return f'{format_float(nanoseconds / (1000 ** 3 * 60 * 60))} h'
 
 class SizeTimeChart(NamedTuple):
     name: str
