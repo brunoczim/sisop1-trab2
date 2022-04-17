@@ -107,6 +107,19 @@ estruturas de dados, com diferentes algoritmos, e com diferentes localidades.
 
 \section{Localidade e Programas Estudados}
 
+Para explorar efeitos de localidade sobre a TLB, foram experimentadas três
+estruturas de dados: \textit{arrays}, árvores binárias, e listas simplesmente
+encadeadas. No entanto, para \textit{arrays}, foram usados quatro algorimtos de
+busca diferentes: busca binária (\textit{sorted-array}), busca linear com boa
+localidade (\textit{good-local-array}), busca linear com má localidade
+(\textit{bad-local-array}) e busca linear com localidade péssima
+(\textit{worse-local-array}).
+
+Para árvores binárias, dois algoritmos foram usados: uma busca assumindo que a
+árvore está ordenada (\textit{with-order-tree}), padrão de árvores de busca, e
+uma busca que não assume isso (\textit{without-order-tree}). Sobre a lista
+encadeada, foi usado apenas um algoritmo de busca linear (\textit{linked-list}).
+
 \nocite{*}
 \printbibliography
 
