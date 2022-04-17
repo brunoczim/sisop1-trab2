@@ -1,8 +1,9 @@
 import csv
 import sys
 import os
-from typing import Dict, NamedTuple, List, Generator, Tuple, Optional
+from typing import Dict, NamedTuple, List, Generator, Tuple, Optional, Any
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 
 class BadRowFormat(Exception):
     def __init__(self, row_strings: List[str], message: str):
@@ -66,6 +67,35 @@ class Mode(NamedTuple):
     key: str
     name: str
 
+def size_formatter(sizes: List[int]) -> Any:
+    @ticker.FuncFormatter
+    def impl(index: int, pos: Any) -> str:
+        size = sizes[index]
+        if size < 1024 ** 1:
+            return f'{size} B'
+        if size < 1024 ** 2:
+            return f'{size / 1024 ** 1 : .3f} KiB'
+        if size < 1024 ** 3:
+            return f'{size / 1024 ** 2 : .3f} MiB'
+        if size < 1024 ** 4:
+            return f'{size / 1024 ** 3 : .3f} GiB'
+        return f'{size / 1024 ** 4 : .3f} TiB'
+    return impl
+
+@ticker.FuncFormatter
+def time_formatter(nanoseconds: int, pos: Any) -> str:
+    if nanoseconds < 1000 ** 1:
+        return f'{nanoseconds} ns'
+    if nanoseconds < 1000 ** 2:
+        return f'{nanoseconds / 1000 ** 1 : .3f} μs'
+    if nanoseconds < 1000 ** 3:
+        return f'{nanoseconds / 1000 ** 2 : .3f} ms'
+    if nanoseconds < 1000 ** 4:
+        return f'{nanoseconds / 1000 ** 3 : .3f} s'
+    if nanoseconds < 60 * 1000 ** 4:
+        return f'{nanoseconds / 1000 ** 4 : .3f} m'
+    return f'{nanoseconds / 60 * 1024 ** 4 : .3f} h'
+
 class SizeTimeChart(NamedTuple):
     name: str
     title: str
@@ -75,19 +105,24 @@ class SizeTimeChart(NamedTuple):
     def plot(self, output_dir: str):
         fig, ax = plt.subplots()
         for label, times_list in self.times.items():
-            ax.plot(self.sizes, times_list, label=label)
+            ax.plot(range(len(self.sizes)), times_list, label=label)
         ax.set_xlabel('Input size')
+        ax.xaxis.set_major_formatter(size_formatter(self.sizes))
+        ax.yaxis.set_major_formatter(time_formatter)
         ax.set_ylabel('Time')
         ax.set_title(self.title, pad=18.0)
         ax.yaxis.grid(True)
         max_time = max(map(lambda lst: max(lst), self.times.values()))
         min_time = min(map(lambda lst: min(lst), self.times.values()))
-        yticks = 5
+        yticks = 10 
         interval = (max_time - min_time) / (yticks - 1);
         ax.set_yticks([
             min_time + i * interval
             for i in range(0, yticks)])
+        ax.set_xticks(range(len(self.sizes)))
         ax.legend()
+        fig.set_figwidth(10)
+        fig.set_figheight(10)
         fig.savefig(
                 os.path.join(output_dir, f'{self.name}.png'),
                 bbox_inches='tight') 
