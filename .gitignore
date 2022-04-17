@@ -1,6 +1,6 @@
 /target
 Cargo.lock
-/output.csv
-/charts
+#/output.csv
+#/charts
 /chart-plotter/venv
 /chart-plotter/.mypy_cache
