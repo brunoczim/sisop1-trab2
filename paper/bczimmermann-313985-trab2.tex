@@ -96,10 +96,16 @@ páginas convencional, mas é implementado em \textit{hardware}, então, se uma
 página está no TLB, faz-se apenas um acesso à memória, em comparação aos
 dois acesso pela tabela de página tradicional. Como é um \textit{cache}, ele não
 armazena a estrutura toda das tabelas de páginas, mas apenas páginas
-específicas, por isso, para aproveitar a performance do TLB, é importante que os
-programas busquem ter boa localidade.
+específicas, e portanto a TLB também guarda uma \textit{tag} para identificar a
+página guardada em uma entrada.
 
-\section{Localidade de Programas}
+Portanto, para aproveitar a performance do TLB, ou até mesmo da tabela de
+páginas convencional, é importante que os programas busquem ter boa localidade.
+Por exemplo, sequências de endereços que ``pulam'' páginas podem acabar fazendo
+mau uso da TLB. Neste artigo, vamos estudar os efeitos de usar-se diferentes
+estruturas de dados, com diferentes algoritmos, e com diferentes localidades.
+
+\section{Localidade e Programas Estudados}
 
 \nocite{*}
 \printbibliography
