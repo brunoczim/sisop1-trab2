@@ -46,7 +46,6 @@ def parse_rows(path: str) -> List[Row]:
         reader = csv.reader(file)
         for row in reader:
             rows.append(Row.parse(row))
-            
     return rows
 
 class Collection(NamedTuple):
@@ -140,8 +139,6 @@ def make_modes_chart(
     times: Dict[str, List[int]] = dict(map(
         lambda mode: (mode.key, []), modes))
 
-    collection_key = collection.display_key()
-
     for row in rows:
         if row.collection == collection.key and row.operation == operation.key:
             if row.mode in modes_map:
@@ -161,13 +158,13 @@ def make_charts(rows: List[Row]) -> List[SizeTimeChart]:
             Mode(key='debug', name='Debug (no optimizations)'),
             Mode(key='release', name='Release (optimized)')]
     operations = [
-            Operation(key='creation', name='Creation'),
+            Operation(key='create', name='Creation'),
             Operation(key='find', name='Search for element'),
             Operation(
                 key='inc-less-than',
                 name='Increment all elements smaller than a certain value') ]
 
-    creation_collections = [
+    create_collections = [
             Collection(
                 key='sorted-array',
                 name='sorted array'),
@@ -209,8 +206,8 @@ def make_charts(rows: List[Row]) -> List[SizeTimeChart]:
     modes_text = ",".join(map(lambda mode: mode.name, modes))
 
     for operation in operations:
-        if operation.key == 'creation':
-            collections = creation_collections
+        if operation.key == 'create':
+            collections = create_collections
         else:
             collections = other_op_collections
 
@@ -227,7 +224,7 @@ def make_charts(rows: List[Row]) -> List[SizeTimeChart]:
                 collections))
 
         for collection in collections:
-            name = f'collections-{operation.key}-{collection.display_key()}'
+            name = f'modes-{operation.key}-{collection.display_key()}'
             title = (f'Operation {operation.name} .with {collection.name}'
                     + f' collection in all {modes_text} modes')
             charts.append(make_modes_chart(
@@ -251,7 +248,7 @@ def main():
         sys.exit(1)
     rows = parse_rows(sys.argv[1])
     charts = make_charts(rows)
-    charts.plot(sys.argv[2])
+    plot_charts(sys.argv[2], charts)
 
 if __name__ == '__main__':
     main()
