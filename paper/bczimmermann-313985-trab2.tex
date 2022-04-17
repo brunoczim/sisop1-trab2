@@ -1,0 +1,63 @@
+\documentclass[a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[portuguese]{babel}
+\usepackage{hyphenat}
+
+\usepackage{geometry}
+ \geometry{
+ a4paper,
+ left=20mm,
+ right=20mm,
+ top=30mm,
+ bottom=20mm,
+ }
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\rhead{Bruno Corrêa Zimmermann -- 313985}
+\title{Programação Concorrente -- Um Estudo Sobre Sincronização}
+\author{Bruno Corrêa Zimmermann}
+\date{17 de Março de 2022}
+\setlength{\headheight}{13pt}
+
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{upquote}
+\usepackage{amsmath}
+\usepackage{fancyvrb}
+\usepackage{tgcursor}
+\usepackage{placeins}
+\usepackage{fancyvrb,minted}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{biblatex}
+\usepackage{csquotes}
+\addbibresource{trab2.bib}
+\definecolor{LightGray}{gray}{0.9}
+\renewcommand{\baselinestretch}{1.5}
+\newenvironment{code}[1]{
+\VerbatimEnvironment
+\begin{minted}[frame=single,baselinestretch=1,fontsize=\small]{#1}}{
+\end{minted}
+}
+
+\begin{document}
+
+%\fontsize{12}{12}
+%\selectfont
+
+\maketitle
+
+NOTA: os códigos se encontram no repositório
+https://github.com/brunoczim/sisop1-trab2
+
+\section{Introdução}
+
+Memória virtual é um mecanismo de abstração da memória física que dá a impressão
+a um processo de que o espaço de memória onde ele está pertence todo a ele.
+
+\nocite{*}
+\printbibliography
+
+\end{document}

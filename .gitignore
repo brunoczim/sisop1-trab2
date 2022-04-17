@@ -4,3 +4,14 @@ Cargo.lock
 #/charts
 /chart-plotter/venv
 /chart-plotter/.mypy_cache
+/paper/*.aux
+/paper/*.bcf
+/paper/*.fdb_latexmk
+/paper/*.fls
+/paper/*.log
+/paper/*.blg
+/paper/*.bbl
+/paper/*.pdf
+/paper/*.run.xml
+/paper/*.synctex.gz
+/paper/_minted-*
