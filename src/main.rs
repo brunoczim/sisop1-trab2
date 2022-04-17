@@ -10,7 +10,7 @@ use std::{
     error::Error,
     fmt,
     fs,
-    io::{self, Seek},
+    io,
     mem,
     path::PathBuf,
     process,
@@ -20,12 +20,15 @@ use std::{
 type Element = u64;
 
 const ELEMS_IN_PAGE: usize = 0x1000 / mem::size_of::<Element>();
-const SIZES: [usize; 5] = [
-    ELEMS_IN_PAGE / 0x10,
-    ELEMS_IN_PAGE * 0x10usize.pow(0),
-    ELEMS_IN_PAGE * 0x10usize.pow(1),
-    ELEMS_IN_PAGE * 0x10usize.pow(2),
-    ELEMS_IN_PAGE * 0x10usize.pow(3),
+const SIZES: [usize; 8] = [
+    ELEMS_IN_PAGE / 4usize.pow(2),
+    ELEMS_IN_PAGE / 4usize.pow(1),
+    ELEMS_IN_PAGE * 4usize.pow(0),
+    ELEMS_IN_PAGE * 4usize.pow(1),
+    ELEMS_IN_PAGE * 4usize.pow(2),
+    ELEMS_IN_PAGE * 4usize.pow(3),
+    ELEMS_IN_PAGE * 4usize.pow(4),
+    ELEMS_IN_PAGE * 4usize.pow(5),
 ];
 
 #[derive(Debug, Clone)]
@@ -103,7 +106,7 @@ fn main() {
 
 fn try_main(arguments: &Arguments) -> io::Result<()> {
     let mut rng = StdRng::from_seed(arguments.seed.bytes);
-    let mut file = fs::OpenOptions::new()
+    let file = fs::OpenOptions::new()
         .create(true)
         .read(false)
         .write(true)
@@ -111,9 +114,8 @@ fn try_main(arguments: &Arguments) -> io::Result<()> {
         .append(!arguments.truncate)
         .open(&arguments.output)?;
 
-    let write_headers = file.stream_position()? == 0;
     let mut csv_writer =
-        csv::WriterBuilder::new().has_headers(write_headers).from_writer(file);
+        csv::WriterBuilder::new().has_headers(false).from_writer(file);
 
     for size in SIZES {
         run_for_size(size, &arguments.mode_name, &mut rng, &mut csv_writer)?;

@@ -1,2 +1,6 @@
 /target
 Cargo.lock
+/output.csv
+/chart-maker/venv
+/chart-maker/.mypy_cache
+/chart-maker/report
