@@ -1,13 +1,12 @@
 mod array;
 mod linked_list;
 mod tree;
+mod collection;
 
-use array::Array;
 use clap::Parser;
-use linked_list::LinkedList;
+use collection::Collection;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{
-    collections::HashSet,
     error::Error,
     fmt,
     fs,
@@ -16,96 +15,18 @@ use std::{
     path::PathBuf,
     process,
     str::FromStr,
-    time::{Duration, Instant},
 };
-use tree::Tree;
 
 type Element = u64;
 
 const ELEMS_IN_PAGE: usize = 0x1000 / mem::size_of::<Element>();
 const SIZES: [usize; 5] = [
-    ELEMS_IN_PAGE / 16,
-    ELEMS_IN_PAGE * 16usize.pow(0),
-    ELEMS_IN_PAGE * 16usize.pow(1),
-    ELEMS_IN_PAGE * 16usize.pow(2),
-    ELEMS_IN_PAGE * 16usize.pow(3),
+    ELEMS_IN_PAGE / 0x10,
+    ELEMS_IN_PAGE * 0x10usize.pow(0),
+    ELEMS_IN_PAGE * 0x10usize.pow(1),
+    ELEMS_IN_PAGE * 0x10usize.pow(2),
+    ELEMS_IN_PAGE * 0x10usize.pow(3),
 ];
-
-#[derive(Debug, Clone, Copy)]
-enum Operation {
-    Create,
-    Find,
-    IncLessThan,
-}
-
-impl Operation {
-    fn render(self) -> &'static str {
-        match self {
-            Operation::Create => "create",
-            Operation::Find => "find",
-            Operation::IncLessThan => "inc-less-than",
-        }
-    }
-}
-
-impl fmt::Display for Operation {
-    fn fmt(&self, fmtr: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmtr, "{}", self.render())
-    }
-}
-
-impl serde::Serialize for Operation {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(self.render())
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Variant {
-    SortedArray,
-    UnsortedArray,
-    GoodLocalArray,
-    BadLocalArray,
-    WorseLocalArray,
-    Tree,
-    WithOrderTree,
-    WithoutOrderTree,
-    LinkedList,
-}
-
-impl Variant {
-    fn render(self) -> &'static str {
-        match self {
-            Variant::SortedArray => "sorted-array",
-            Variant::UnsortedArray => "unsorted-array",
-            Variant::GoodLocalArray => "good-local-array",
-            Variant::BadLocalArray => "bad-local-array",
-            Variant::WorseLocalArray => "worse-local-array",
-            Variant::WithOrderTree => "tree",
-            Variant::Tree => "with-order-tree",
-            Variant::WithoutOrderTree => "without-order-tree",
-            Variant::LinkedList => "linked-list",
-        }
-    }
-}
-
-impl fmt::Display for Variant {
-    fn fmt(&self, fmtr: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmtr, "{}", self.render())
-    }
-}
-
-impl serde::Serialize for Variant {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(self.render())
-    }
-}
 
 #[derive(Debug, Clone)]
 struct SeedError;
@@ -161,111 +82,23 @@ struct Arguments {
     truncate: bool,
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize)]
-struct ReportRow<'mode> {
-    mode_name: &'mode str,
-    size: usize,
-    operation: Operation,
-    variant: Variant,
-    nanoseconds: u128,
-}
-
 #[derive(Debug, Clone)]
 struct Collections {
-    unsorted_array: Array,
-    sorted_array: Array,
-    linked_list: LinkedList,
-    tree: Tree,
+    good_local_array: collection::GoodLocalArray,
+    bad_local_array: collection::BadLocalArray,
+    worse_local_array: collection::WorseLocalArray,
+    sorted_array: collection::SortedArray,
+    linked_list: collection::LinkedList,
+    with_order_tree: collection::WithOrderTree,
+    without_order_tree: collection::WithoutOrderTree,
 }
 
-fn run_creation<W>(
-    elements: &[Element],
-    mode_name: &str,
-    csv_writer: &mut csv::Writer<W>,
-) -> io::Result<Collections>
-where
-    W: io::Write,
-{
-    let then = Instant::now();
-    let mut unsorted_array = Array::empty();
-    for &element in elements {
-        unsorted_array.append(element);
+fn main() {
+    let arguments = Arguments::parse();
+    if let Err(error) = try_main(&arguments) {
+        eprintln!("Error: {}", error);
+        process::exit(1);
     }
-    let elapsed = then.elapsed();
-    let row = ReportRow {
-        mode_name,
-        size: elements.len(),
-        operation: Operation::Create,
-        variant: Variant::UnsortedArray,
-        nanoseconds: elapsed.as_nanos(),
-    };
-    csv_writer.serialize(row)?;
-
-    let then = Instant::now();
-    let mut sorted_array = Array::empty();
-    for &element in elements {
-        sorted_array.append(element);
-    }
-    sorted_array.sort();
-    let elapsed = then.elapsed();
-    let row = ReportRow {
-        mode_name,
-        size: elements.len(),
-        operation: Operation::Create,
-        variant: Variant::SortedArray,
-        nanoseconds: elapsed.as_nanos(),
-    };
-    csv_writer.serialize(row)?;
-
-    let then = Instant::now();
-    let mut linked_list = LinkedList::empty();
-    for &element in elements {
-        linked_list.prepend(element);
-    }
-    let elapsed = then.elapsed();
-    let row = ReportRow {
-        mode_name,
-        size: elements.len(),
-        operation: Operation::Create,
-        variant: Variant::LinkedList,
-        nanoseconds: elapsed.as_nanos(),
-    };
-    csv_writer.serialize(row)?;
-
-    let then = Instant::now();
-    let mut tree = Tree::empty();
-    for &element in elements {
-        tree.insert(element);
-    }
-    let elapsed = then.elapsed();
-    let row = ReportRow {
-        mode_name,
-        size: elements.len(),
-        operation: Operation::Create,
-        variant: Variant::Tree,
-        nanoseconds: elapsed.as_nanos(),
-    };
-    csv_writer.serialize(row)?;
-
-    Ok(Collections { unsorted_array, sorted_array, linked_list, tree })
-}
-
-fn run_for_size<R, W>(
-    size: usize,
-    mode_name: &str,
-    mut rng: R,
-    csv_writer: &mut csv::Writer<W>,
-) -> io::Result<()>
-where
-    R: Rng,
-    W: io::Write,
-{
-    let mut elements: Vec<Element> = vec![0; size];
-    rng.fill(&mut elements[..]);
-
-    let collections = run_creation(&elements, mode_name, csv_writer)?;
-
-    Ok(())
 }
 
 fn try_main(arguments: &Arguments) -> io::Result<()> {
@@ -289,10 +122,226 @@ fn try_main(arguments: &Arguments) -> io::Result<()> {
     Ok(())
 }
 
-fn main() {
-    let arguments = Arguments::parse();
-    if let Err(error) = try_main(&arguments) {
-        eprintln!("Error: {}", error);
-        process::exit(1);
-    }
+fn run_for_size<R, W>(
+    size: usize,
+    mode_name: &str,
+    mut rng: R,
+    csv_writer: &mut csv::Writer<W>,
+) -> io::Result<()>
+where
+    R: Rng,
+    W: io::Write,
+{
+    let mut elements: Vec<Element> = vec![0; size];
+    rng.fill(&mut elements[..]);
+
+    let mut collections = run_creation(&elements, mode_name, csv_writer)?;
+    let extra_element = rng.gen();
+    run_inc_less_than(
+        &mut collections,
+        &elements,
+        extra_element,
+        mode_name,
+        csv_writer,
+    )?;
+    run_find(&collections, &elements, extra_element, mode_name, csv_writer)?;
+
+    Ok(())
+}
+
+fn run_creation<W>(
+    elements: &[Element],
+    mode_name: &str,
+    csv_writer: &mut csv::Writer<W>,
+) -> io::Result<Collections>
+where
+    W: io::Write,
+{
+    let oper_name = "create";
+
+    let collections = Collections {
+        good_local_array: collection::GoodLocalArray::record_create(
+            elements, mode_name, oper_name, csv_writer,
+        )?,
+        bad_local_array: collection::BadLocalArray::record_create(
+            elements, mode_name, oper_name, csv_writer,
+        )?,
+        worse_local_array: collection::WorseLocalArray::record_create(
+            elements, mode_name, oper_name, csv_writer,
+        )?,
+        sorted_array: collection::SortedArray::record_create(
+            elements, mode_name, oper_name, csv_writer,
+        )?,
+        linked_list: collection::LinkedList::record_create(
+            elements, mode_name, oper_name, csv_writer,
+        )?,
+        with_order_tree: collection::WithOrderTree::record_create(
+            elements, mode_name, oper_name, csv_writer,
+        )?,
+        without_order_tree: collection::WithoutOrderTree::record_create(
+            elements, mode_name, oper_name, csv_writer,
+        )?,
+    };
+
+    Ok(collections)
+}
+
+fn run_find<W>(
+    collections: &Collections,
+    all_elements: &[Element],
+    extra_element: Element,
+    mode_name: &str,
+    csv_writer: &mut csv::Writer<W>,
+) -> io::Result<()>
+where
+    W: io::Write,
+{
+    let oper_name = "find";
+
+    let target_elements = [
+        all_elements[all_elements.len() / 4],
+        all_elements[all_elements.len() / 2],
+        all_elements[3 * all_elements.len() / 4],
+        extra_element,
+    ];
+
+    let mut found_all = true;
+
+    found_all &= collections.good_local_array.record_find(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    found_all &= collections.bad_local_array.record_find(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    found_all &= collections.worse_local_array.record_find(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    found_all &= collections.sorted_array.record_find(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    found_all &= collections.with_order_tree.record_find(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    found_all &= collections.without_order_tree.record_find(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    found_all &= collections.linked_list.record_find(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    println!("Found all? {:?}", found_all);
+
+    Ok(())
+}
+
+fn run_inc_less_than<W>(
+    collections: &mut Collections,
+    all_elements: &[Element],
+    extra_element: Element,
+    mode_name: &str,
+    csv_writer: &mut csv::Writer<W>,
+) -> io::Result<()>
+where
+    W: io::Write,
+{
+    let oper_name = "inc-less-than";
+
+    let target_elements = [
+        all_elements[all_elements.len() / 4],
+        all_elements[all_elements.len() / 2],
+        all_elements[3 * all_elements.len() / 4],
+        extra_element,
+    ];
+
+    collections.good_local_array.record_inc_less_than(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    collections.bad_local_array.record_inc_less_than(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    collections.worse_local_array.record_inc_less_than(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    collections.sorted_array.record_inc_less_than(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    collections.with_order_tree.record_inc_less_than(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    collections.without_order_tree.record_inc_less_than(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    collections.linked_list.record_inc_less_than(
+        &target_elements,
+        all_elements,
+        mode_name,
+        oper_name,
+        csv_writer,
+    )?;
+
+    Ok(())
 }
