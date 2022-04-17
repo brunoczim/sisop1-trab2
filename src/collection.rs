@@ -4,7 +4,7 @@ use crate::{
     tree::Tree as TreeImpl,
     Element,
 };
-use std::{io, time::Instant};
+use std::{io, mem, time::Instant};
 
 #[derive(Debug, Clone, Copy, serde::Serialize)]
 struct RecordRow<'mode, 'oper> {
@@ -38,7 +38,7 @@ pub trait Collection: Sized {
         let elapsed = then.elapsed();
         let row = RecordRow {
             mode: mode_name,
-            size: elements.len(),
+            size: elements.len() * mem::size_of::<Element>(),
             operation: oper_name,
             collection: Self::NAME,
             nanoseconds: elapsed.as_nanos(),
@@ -66,7 +66,7 @@ pub trait Collection: Sized {
         let elapsed = then.elapsed();
         let row = RecordRow {
             mode: mode_name,
-            size: all_elements.len(),
+            size: all_elements.len() * mem::size_of::<Element>(),
             operation: oper_name,
             collection: Self::NAME,
             nanoseconds: elapsed.as_nanos(),
@@ -93,7 +93,7 @@ pub trait Collection: Sized {
         let elapsed = then.elapsed();
         let row = RecordRow {
             mode: mode_name,
-            size: all_elements.len(),
+            size: all_elements.len() * mem::size_of::<Element>(),
             operation: oper_name,
             collection: Self::NAME,
             nanoseconds: elapsed.as_nanos(),
