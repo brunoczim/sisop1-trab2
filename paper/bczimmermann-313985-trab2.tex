@@ -16,9 +16,9 @@
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \rhead{Bruno Corrêa Zimmermann -- 313985}
-\title{Programação Concorrente -- Um Estudo Sobre Sincronização}
+\title{Paginação de Memória, TLB, e Localidade -- Estudo de Caso}
 \author{Bruno Corrêa Zimmermann}
-\date{17 de Março de 2022}
+\date{20 de Abril de 2022}
 \setlength{\headheight}{13pt}
 
 \usepackage{amssymb}
@@ -55,7 +55,51 @@ https://github.com/brunoczim/sisop1-trab2
 \section{Introdução}
 
 Memória virtual é um mecanismo de abstração da memória física que dá a impressão
-a um processo de que o espaço de memória onde ele está pertence todo a ele.
+a um processo de que o espaço de memória onde ele está pertence todo a ele. Uma
+forma de implementar esse mecanismo, usada em processadores x86-64, em sistemas
+como Linux, é paginação de memória. Nesse sistema, a memória é dividida em
+páginas de tamanho fixo, e, no caso de Linux x86-64, o tamanho é 4KiB.
+
+Nesse esquema, há páginas virtuais e páginas físicas. Páginas virtuais são
+mapeadas para páginas físicas, mas processos enxergam apenas as páginas
+virtuais. Para realizar a tradução entre endereços, é necessário manter tabelas
+de páginas. As páginas virtuais podem não estar mapeadas ainda, e nesse caso,
+ao tentar acessá-las, o processador gera um sinal chamado
+``\textit{Page Fault}'', e então o sistema operacional mapeia a página virtual
+para uma página física.
+
+É possível que uma página seja armazenada em disco. Quando um processo tenta
+acessar um endereço virtual, busca-se na tabela de páginas a entrada da página
+virtual do endereço. Se não está mapeada (\textit{bit} de validade valendo $0$),
+busca-se do disco a página e define-se o \textit{bit} de validade para $1$. Em
+ambos os casos, ao final, obtém-se o número da página física, e dentro dela, o
+enedereço físico é acessado.
+
+Na tabela de páginas, há alguns \textit{bits} de controle para cada entrada.
+O \textit{bit} mencionado acima (\textit{bit} de validade) indica se a entrada
+na tabela é válida, ou seja, se há um mapeamento válido para a página virtual
+associada à entrada. Há ainda o \textit{bit} ``\textit{dirty}'', que indica se a
+página física associada àquela entrada na tabela está incosistente com o disco,
+e no caso de substituição LRU (\textit{Least Recently Used}), um bit de
+referência, indicando se essa entrada foi usada recentemente.
+
+A tabela de páginas é finita, e portanto, quando uma nova página precisa ser
+carregada, é possível que outra precise ser descarregada. Existem várias formas
+de definir quais páginas serão descarregadas, e o LRU é um algoritmo que resolve
+esse problema, substituindo as páginas que foram usadas pela última vez há mais
+tempo. Outro algoritmo é o FIFO (\textit{First-in, First-out}), que substitui a
+página carregada há mais tempo.
+
+Além da tabela de páginas, existe um \textit{cache} de páginas, chamado TLB
+(\textit{Translation-Lookaside Buffer}). O TLB se assemelha a tabela de
+páginas convencional, mas é implementado em \textit{hardware}, então, se uma
+página está no TLB, faz-se apenas um acesso à memória, em comparação aos
+dois acesso pela tabela de página tradicional. Como é um \textit{cache}, ele não
+armazena a estrutura toda das tabelas de páginas, mas apenas páginas
+específicas, por isso, para aproveitar a performance do TLB, é importante que os
+programas busquem ter boa localidade.
+
+\section{Localidade de Programas}
 
 \nocite{*}
 \printbibliography
