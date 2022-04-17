@@ -118,7 +118,7 @@ class SizeTimeChart(NamedTuple):
         ax.set_xlabel('Input size (log4)')
         ax.xaxis.set_major_formatter(size_formatter(self.sizes))
         ax.yaxis.set_major_formatter(time_formatter)
-        ax.set_ylabel(f'Time (log{self.ybase})')
+        ax.set_ylabel(f'Time (log)')
         ax.set_title(self.title, pad=18.0)
         ax.yaxis.grid(True)
         max_time = max(map(lambda lst: max(lst), self.times.values()))
