@@ -17,7 +17,7 @@ impl Tree {
         Self { root: None }
     }
 
-    pub fn insert(&mut self, element: Element) -> bool {
+    pub fn insert_with_order(&mut self, element: Element) -> bool {
         let mut this = self;
         loop {
             match &mut this.root {
@@ -33,6 +33,34 @@ impl Tree {
                         right: Tree::empty(),
                     }));
                     return true;
+                },
+            }
+        }
+    }
+
+    pub fn insert_without_order(&mut self, element: Element) {
+        let mut this = self;
+        let mut reverse = false;
+        loop {
+            match &mut this.root {
+                Some(node) => {
+                    this = match (element.cmp(&node.data), reverse) {
+                        (cmp::Ordering::Equal, true)
+                        | (cmp::Ordering::Less, false)
+                        | (cmp::Ordering::Greater, true) => &mut node.left,
+                        (cmp::Ordering::Equal, false)
+                        | (cmp::Ordering::Less, true)
+                        | (cmp::Ordering::Greater, false) => &mut node.right,
+                    };
+                    reverse = !reverse;
+                },
+                root @ None => {
+                    *root = Some(Box::new(Node {
+                        data: element,
+                        left: Tree::empty(),
+                        right: Tree::empty(),
+                    }));
+                    break;
                 },
             }
         }
@@ -79,7 +107,7 @@ impl Tree {
                 let mut nodes = vec![this.root.take()];
                 while let Some(maybe_node) = nodes.pop() {
                     if let Some(mut node) = maybe_node {
-                        self.insert(node.data.wrapping_add(1));
+                        self.insert_with_order(node.data.wrapping_add(1));
                         nodes.push(node.left.root.take());
                         nodes.push(node.right.root.take());
                     }
@@ -97,26 +125,11 @@ impl Tree {
 
     pub fn inc_less_than_without_order(&mut self, element: Element) {
         let mut nodes: Vec<&mut Option<Box<Node>>> = vec![&mut self.root];
-        while let Some(mut maybe_node) = nodes.pop() {
-            let mut found_branch = false;
-            if let Some(node) = &mut maybe_node {
+        while let Some(maybe_node) = nodes.pop() {
+            if let Some(node) = maybe_node.as_mut() {
                 if node.data < element {
-                    found_branch = true;
+                    node.data = node.data.wrapping_add(1);
                 }
-            }
-
-            if found_branch {
-                let mut nodes = vec![maybe_node.take()];
-                while let Some(maybe_node) = nodes.pop() {
-                    if let Some(mut node) = maybe_node {
-                        self.insert(node.data.wrapping_add(1));
-                        nodes.push(node.left.root.take());
-                        nodes.push(node.right.root.take());
-                    }
-                }
-                break;
-            }
-            if let Some(node) = maybe_node {
                 nodes.push(&mut node.left.root);
                 nodes.push(&mut node.right.root);
             }
@@ -229,15 +242,15 @@ mod test {
     use crate::{Element, ELEMS_IN_PAGE};
 
     #[test]
-    fn iterate() {
+    fn iterate_with_order() {
         let mut tree = Tree::empty();
-        tree.insert(10);
-        tree.insert(3);
-        tree.insert(5);
-        tree.insert(9);
-        tree.insert(7);
-        tree.insert(8);
-        tree.insert(6);
+        tree.insert_with_order(10);
+        tree.insert_with_order(3);
+        tree.insert_with_order(5);
+        tree.insert_with_order(9);
+        tree.insert_with_order(7);
+        tree.insert_with_order(8);
+        tree.insert_with_order(6);
         let collected: Vec<_> = tree.into_iter().collect();
         assert_eq!(collected, &[3, 5, 6, 7, 8, 9, 10]);
     }
@@ -246,54 +259,59 @@ mod test {
     fn find() {
         let cut_element = (ELEMS_IN_PAGE * 32 + ELEMS_IN_PAGE / 2) as Element;
 
-        let mut tree = Tree::empty();
+        let mut tree_with_order = Tree::empty();
+        let mut tree_without_order = Tree::empty();
         for i in (cut_element + 1 .. cut_element * 2).step_by(2) {
-            tree.insert(i + 1);
-            tree.insert(i);
+            tree_with_order.insert_with_order(i + 1);
+            tree_with_order.insert_with_order(i);
+            tree_without_order.insert_without_order(i + 1);
+            tree_without_order.insert_without_order(i);
         }
         for i in (0 .. cut_element).step_by(2) {
-            tree.insert(i + 1);
-            tree.insert(i);
+            tree_with_order.insert_with_order(i + 1);
+            tree_with_order.insert_with_order(i);
+            tree_without_order.insert_without_order(i + 1);
+            tree_without_order.insert_without_order(i);
         }
 
-        assert!(!tree.find_with_order(cut_element));
-        assert!(!tree.find_without_order(cut_element));
+        assert!(!tree_with_order.find_with_order(cut_element));
+        assert!(!tree_without_order.find_without_order(cut_element));
 
-        tree.insert(cut_element);
+        tree_with_order.insert_with_order(cut_element);
+        tree_without_order.insert_with_order(cut_element);
 
-        assert!(tree.find_with_order(cut_element));
-        assert!(tree.find_without_order(cut_element));
+        assert!(tree_with_order.find_with_order(cut_element));
+        assert!(tree_without_order.find_without_order(cut_element));
     }
 
     #[test]
     fn inc_less_than() {
         let cut_element = (ELEMS_IN_PAGE * 32 + ELEMS_IN_PAGE / 2) as Element;
 
-        let mut tree = Tree::empty();
+        let mut tree_with_order = Tree::empty();
+        let mut tree_without_order = Tree::empty();
         for i in (cut_element .. cut_element * 2).step_by(2) {
-            tree.insert(i + 1);
-            tree.insert(i);
+            tree_with_order.insert_with_order(i + 1);
+            tree_with_order.insert_with_order(i);
+            tree_without_order.insert_without_order(i + 1);
+            tree_without_order.insert_without_order(i);
         }
         for i in (0 .. cut_element).step_by(2) {
-            tree.insert(i + 1);
-            tree.insert(i);
+            tree_with_order.insert_with_order(i + 1);
+            tree_with_order.insert_with_order(i);
+            tree_without_order.insert_without_order(i + 1);
+            tree_without_order.insert_without_order(i);
         }
 
-        let mut with_order_tree = tree.clone();
-        with_order_tree.inc_less_than_with_order(cut_element);
+        tree_with_order.inc_less_than_with_order(cut_element);
+        tree_without_order.inc_less_than_without_order(cut_element);
 
-        let mut without_order_tree = tree.clone();
-        without_order_tree.inc_less_than_without_order(cut_element);
-
-        let mut with_order_iter = with_order_tree.into_iter();
-        let mut without_order_iter = without_order_tree.into_iter();
+        let mut with_order_iter = tree_with_order.into_iter();
 
         for i in 1 .. cut_element * 2 {
             assert_eq!(with_order_iter.next(), Some(i));
-            assert_eq!(without_order_iter.next(), Some(i));
         }
 
         assert_eq!(with_order_iter.next(), None);
-        assert_eq!(without_order_iter.next(), None);
     }
 }

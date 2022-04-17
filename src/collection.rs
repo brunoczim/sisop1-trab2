@@ -240,7 +240,7 @@ impl Collection for WithOrderTree {
     fn create(elements: &[Element]) -> Self {
         let mut tree = TreeImpl::empty();
         for &element in elements {
-            tree.insert(element);
+            tree.insert_with_order(element);
         }
         Self { tree_impl: tree }
     }
@@ -265,7 +265,7 @@ impl Collection for WithoutOrderTree {
     fn create(elements: &[Element]) -> Self {
         let mut tree = TreeImpl::empty();
         for &element in elements {
-            tree.insert(element);
+            tree.insert_without_order(element);
         }
         Self { tree_impl: tree }
     }
