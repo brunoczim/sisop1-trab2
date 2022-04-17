@@ -1,6 +1,7 @@
 import csv
 import sys
 import os
+import math
 from typing import Dict, NamedTuple, List, Generator, Tuple, Optional, Any
 import matplotlib.pyplot as plt
 from matplotlib import ticker
@@ -75,7 +76,7 @@ def size_formatter(sizes: List[int]) -> Any:
     def impl(index: int, pos: Any) -> str:
         size = sizes[index]
         if size < 1024 ** 1:
-            return f'{size} B'
+            return f'{round(size)} B'
         if size < 1024 ** 2:
             return f'{format_float(size / 1024 ** 1)} KiB'
         if size < 1024 ** 3:
@@ -88,7 +89,7 @@ def size_formatter(sizes: List[int]) -> Any:
 @ticker.FuncFormatter
 def time_formatter(nanoseconds: int, pos: Any) -> str:
     if nanoseconds < 1000 ** 1:
-        return f'{nanoseconds} ns'
+        return f'{round(nanoseconds)} ns'
     if nanoseconds < 1000 ** 2:
         return f'{format_float(nanoseconds / 1000 ** 1)} μs'
     if nanoseconds < 1000 ** 3:
@@ -104,24 +105,31 @@ class SizeTimeChart(NamedTuple):
     title: str
     sizes: List[int]
     times: Dict[str, List[int]]
+    ybase: float = 2
 
     def plot(self, output_dir: str):
         fig, ax = plt.subplots()
         for label, times_list in self.times.items():
-            ax.plot(range(len(self.sizes)), times_list, label=label)
-        ax.set_xlabel('Input size')
+            ax.semilogy(
+                    range(len(self.sizes)),
+                    times_list,
+                    label=label,
+                    base=self.ybase)
+        ax.set_xlabel('Input size (log4)')
         ax.xaxis.set_major_formatter(size_formatter(self.sizes))
         ax.yaxis.set_major_formatter(time_formatter)
-        ax.set_ylabel('Time')
+        ax.set_ylabel(f'Time (log{self.ybase})')
         ax.set_title(self.title, pad=18.0)
         ax.yaxis.grid(True)
         max_time = max(map(lambda lst: max(lst), self.times.values()))
         min_time = min(map(lambda lst: min(lst), self.times.values()))
-        yticks = 10 
-        interval = (max_time - min_time) / (yticks - 1);
+        yticks = 10
+        log_min_time = math.log(min_time, self.ybase)
+        log_max_time = math.log(max_time, self.ybase)
+        interval = (log_max_time  - log_min_time) / (yticks - 1)
         ax.set_yticks([
-            min_time + i * interval
-            for i in range(0, yticks)])
+            self.ybase ** (log_min_time + i * interval)
+            for i in range(yticks)])
         ax.set_xticks(range(len(self.sizes)))
         ax.legend()
         fig.set_figwidth(10)
@@ -193,14 +201,14 @@ def make_modes_chart(
 def make_charts(rows: List[Row]) -> List[SizeTimeChart]:
     charts = []
     modes = [
-            Mode(key='debug', name='Debug (no optimizations)'),
-            Mode(key='release', name='Release (optimized)')]
+            Mode(key='debug', name='debug (no optimizations)'),
+            Mode(key='release', name='release (optimized)')]
     operations = [
-            Operation(key='create', name='Creation'),
-            Operation(key='find', name='Search for element'),
+            Operation(key='create', name='creation'),
+            Operation(key='find', name='search for element'),
             Operation(
                 key='inc-less-than',
-                name='Increment all elements smaller than a certain value') ]
+                name='increment all elements smaller than a certain value') ]
 
     create_collections = [
             Collection(
@@ -251,8 +259,8 @@ def make_charts(rows: List[Row]) -> List[SizeTimeChart]:
 
         for mode in modes:
             name = f'collections-{operation.key}-{mode.key}'
-            title = (f'Operation {operation.name} in {mode.name}'
-                    + 'mode with different collections')
+            title = (f'Operation "{operation.name}" in "{mode.name}"'
+                    + ' mode, in different collections')
             charts.append(make_collections_chart(
                 name,
                 rows,
@@ -263,8 +271,8 @@ def make_charts(rows: List[Row]) -> List[SizeTimeChart]:
 
         for collection in collections:
             name = f'modes-{operation.key}-{collection.display_key()}'
-            title = (f'Operation {operation.name} .with {collection.name}'
-                    + f' collection in all {modes_text} modes')
+            title = (f'Operation "{operation.name}" with "{collection.name}"'
+                    + f' collection, in all "{modes_text}" modes')
             charts.append(make_modes_chart(
                 name,
                 rows,
