@@ -27,8 +27,8 @@
 \usepackage{amsmath}
 \usepackage{fancyvrb}
 \usepackage{tgcursor}
-\usepackage{placeins}
-\usepackage{fancyvrb,minted}
+\usepackage{fancyvrb}
+\usepackage{minted}
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{biblatex}
@@ -119,6 +119,113 @@ Para árvores binárias, dois algoritmos foram usados: uma busca assumindo que a
 árvore está ordenada (\textit{with-order-tree}), padrão de árvores de busca, e
 uma busca que não assume isso (\textit{without-order-tree}). Sobre a lista
 encadeada, foi usado apenas um algoritmo de busca linear (\textit{linked-list}).
+
+Para cada estrutura de dados foram testadas duas operações: busca
+(\textit{find}) e incremento de todos elementos menores que um certo valor
+(\textit{inc-less-than}). A operação \textit{find} busca o elemento e retorna
+um valor informando se o elemento foi encontrado, enquanto a operação
+\textit{inc-less-than} de fato incrementa todos elementos menores que um dado
+valor. Na figura \ref{fig:good local array find}, vemos a implementação da
+operação \textit{find} para \textit{good-local-array}: é uma simples busca
+linear e percorre pelos elementos em ordem, endereço após endereço.
+
+A implementação da operação \textit{find} para \textit{bad-local-array} está na
+figura \ref{fig:bad local array find}, que ao invés de percorrer em ordem, testa
+o primeiro elemento da primeira página do \textit{array}, e então testa o
+primeiro elemento da décima sexta página, então o primeiro elmento da trigésima
+segunda página, até testar o primeiro elemento de cada grupo de dezesseis
+páginas. Depois disso, ele testa o segundo elemento de cada grupo, e então
+o terceiro, até que o último elemento de cada grupo seja testado. A expectativa
+é que essa implementação pule páginas com muita frequência e force o TLB a
+substituir páginas.
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn find_good_local(&self, element: ElementType) -> bool {
+    let mut i = 0;
+    while i < self.elements.len() {
+        if self.elements[i] == element {
+            return true;
+        }
+        i += 1;
+    }
+    false
+}
+    \end{code}
+    \caption{Implementação da operação \textit{find} para
+        \textit{good-local-array}}
+    \label{fig:good local array find}
+\end{figure}
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn find_bad_local(&self, element: ElementType) -> bool {
+    let jump_pages = 16;
+    let jump_elements = jump_pages * ELEMS_IN_PAGE;
+    let mut offset = 0;
+    while offset < jump_elements {
+        let mut jump_page = 0;
+        let mut index = jump_page * jump_pages + offset;
+        while index < self.elements.len() {
+            if self.elements[index] == element {
+                return true;
+            }
+            jump_page += 1;
+            index = jump_page * jump_pages + offset;
+        }
+        offset += 1;
+    }
+    false
+}
+    \end{code}
+    \caption{Implementação da operação \textit{find} para
+        \textit{bad-local-array}}
+    \label{fig:bad local array find}
+\end{figure}
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn find_worse_local(&self, element: ElementType) -> bool {
+    let rounded = self.elements.len() + ELEMS_IN_PAGE - 1;
+    let pages = rounded / ELEMS_IN_PAGE;
+    let half_size = pages / 2 * ELEMS_IN_PAGE;
+    let jump_pages = 16;
+    let jump_elements = jump_pages * ELEMS_IN_PAGE;
+    let mut offset = 0;
+
+    while offset < jump_elements {
+        let mut jump_page = 0;
+        let mut in_bounds = true;
+        let mut index = jump_page * jump_pages + offset;
+        while in_bounds {
+            in_bounds = false;
+            let lower_index = index;
+            if lower_index < half_size {
+                if self.elements[lower_index] == element {
+                    return true;
+                }
+                in_bounds = true;
+            }
+            let upper_index = index + half_size;
+            if upper_index < self.elements.len() {
+                if self.elements[upper_index] == element {
+                    return true;
+                }
+                in_bounds = true;
+            }
+            jump_page += 1;
+            index = jump_page * jump_pages + offset;
+        }
+        offset += 1;
+    }
+
+    false
+}
+    \end{code}
+    \caption{Implementação da operação \textit{find} para
+        \textit{worse-local-array}}
+    \label{fig:worse local array find}
+\end{figure}
 
 \nocite{*}
 \printbibliography
