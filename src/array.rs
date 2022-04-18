@@ -191,19 +191,19 @@ impl Array {
     }
 
     pub fn inc_less_than_sorted(&mut self, element: Element) {
-        let mut index = match self.binary_search(element) {
-            Ok(index) => index,
-            Err(index) => index,
+        let mut upper_bound = match self.binary_search(element) {
+            Ok(upper_bound) => upper_bound,
+            Err(upper_bound) => upper_bound,
         };
 
-        while index > 0
-            && (index >= self.elements.len() || self.elements[index] >= element)
-        {
-            index -= 1;
+        while upper_bound > 0 && self.elements[upper_bound - 1] >= element {
+            upper_bound -= 1;
         }
 
-        for element in &mut self.elements[.. index] {
-            *element = element.wrapping_add(1);
+        let mut index = 0;
+        while index < upper_bound {
+            self.elements[index] = self.elements[index].wrapping_add(1);
+            index += 1;
         }
     }
 }

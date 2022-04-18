@@ -23,29 +23,22 @@ impl LinkedList {
 
     pub fn find(&self, element: Element) -> bool {
         let mut this = self;
-        loop {
-            match &this.top {
-                Some(top) if top.data == element => {
-                    return true;
-                },
-                Some(top) => this = &top.next,
-                None => return false,
+        while let Some(top) = &this.top {
+            if top.data == element {
+                return true;
             }
+            this = &top.next;
         }
+        false
     }
 
     pub fn inc_less_than(&mut self, element: Element) {
         let mut this = self;
-        loop {
-            match &mut this.top {
-                Some(top) => {
-                    if top.data < element {
-                        top.data = top.data.wrapping_add(1);
-                    }
-                    this = &mut top.next;
-                },
-                None => break,
+        while let Some(top) = &mut this.top {
+            if top.data < element {
+                top.data = top.data.wrapping_add(1);
             }
+            this = &mut top.next;
         }
     }
 }

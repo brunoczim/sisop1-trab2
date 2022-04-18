@@ -202,9 +202,9 @@ where
     let oper_name = "find";
 
     let target_elements = [
-        all_elements[(all_elements.len() / 4).saturating_sub(2)],
-        all_elements[(all_elements.len() / 2).saturating_sub(2)],
-        all_elements[(3 * all_elements.len() / 4).saturating_sub(2)],
+        all_elements[all_elements.len() / 4],
+        all_elements[all_elements.len() / 2],
+        all_elements[3 * all_elements.len() / 4],
         extra_element,
     ];
 
@@ -284,9 +284,9 @@ where
     let oper_name = "inc-less-than";
 
     let target_elements = [
-        all_elements[(all_elements.len() / 4).saturating_sub(2)],
-        all_elements[(all_elements.len() / 2).saturating_sub(2)],
-        all_elements[(3 * all_elements.len() / 4).saturating_sub(2)],
+        all_elements[all_elements.len() / 4],
+        all_elements[all_elements.len() / 2],
+        all_elements[3 * all_elements.len() / 4],
         extra_element,
     ];
 

@@ -21,6 +21,7 @@
 \date{20 de Abril de 2022}
 \setlength{\headheight}{13pt}
 
+\usepackage{placeins}
 \usepackage{amssymb}
 \usepackage{enumitem}
 \usepackage{upquote}
@@ -105,7 +106,7 @@ Por exemplo, sequências de endereços que ``pulam'' páginas podem acabar fazen
 mau uso da TLB. Neste artigo, vamos estudar os efeitos de usar-se diferentes
 estruturas de dados, com diferentes algoritmos, e com diferentes localidades.
 
-\section{Localidade e Programas Estudados}
+\section{Localidades e Programas Estudados}
 
 Para explorar efeitos de localidade sobre a TLB, foram experimentadas três
 estruturas de dados: \textit{arrays}, árvores binárias, e listas simplesmente
@@ -129,23 +130,6 @@ valor. Na figura \ref{fig:good local array find}, vemos a implementação da
 operação \textit{find} para \textit{good-local-array}: é uma simples busca
 linear e percorre pelos elementos em ordem, endereço após endereço.
 
-A implementação da operação \textit{find} para \textit{bad-local-array} está na
-figura \ref{fig:bad local array find}, que ao invés de percorrer em ordem, testa
-o primeiro elemento da primeira página do \textit{array}, e então testa o
-primeiro elemento da décima sexta página, então o primeiro elmento da trigésima
-segunda página, até testar o primeiro elemento de cada grupo de dezesseis
-páginas. Depois disso, ele testa o segundo elemento de cada grupo, e então
-o terceiro, até que o último elemento de cada grupo seja testado. A expectativa
-é que essa implementação pule páginas com muita frequência e force o TLB a
-substituir páginas.
-
-O código na figura \ref{fig:worse local array find} implementa essa operação
-para \textit{worse-local-array}, que, em teoria, teria localidade pior do que
-\textit{bad-local-array}. Essa implementação, além de pular dezesseis páginas,
-divide o \textit{array} em dois, e intercala entre as duas metades: primeiro
-testa um elemento da primeira metade, depois testa um elemento da segunda
-metade, sempre pulando dezesseis páginas em cada metade.
-
 \begin{figure}
     \begin{code}{Rust}
 pub fn find_good_local(&self, element: ElementType) -> bool {
@@ -163,6 +147,16 @@ pub fn find_good_local(&self, element: ElementType) -> bool {
         \textit{good-local-array}}
     \label{fig:good local array find}
 \end{figure}
+
+A implementação da operação \textit{find} para \textit{bad-local-array} está na
+figura \ref{fig:bad local array find}, que ao invés de percorrer em ordem, testa
+o primeiro elemento da primeira página do \textit{array}, e então testa o
+primeiro elemento da décima sexta página, então o primeiro elmento da trigésima
+segunda página, até testar o primeiro elemento de cada grupo de dezesseis
+páginas. Depois disso, ele testa o segundo elemento de cada grupo, e então
+o terceiro, até que o último elemento de cada grupo seja testado. A expectativa
+é que essa implementação pule páginas com muita frequência e force o TLB a
+substituir páginas.
 
 \begin{figure}
     \begin{code}{Rust}
@@ -189,6 +183,13 @@ pub fn find_bad_local(&self, element: ElementType) -> bool {
         \textit{bad-local-array}}
     \label{fig:bad local array find}
 \end{figure}
+
+O código na figura \ref{fig:worse local array find} implementa essa operação
+para \textit{worse-local-array}, que, em teoria, teria localidade pior do que
+\textit{bad-local-array}. Essa implementação, além de pular dezesseis páginas,
+divide o \textit{array} em dois, e intercala entre as duas metades: primeiro
+testa um elemento da primeira metade, depois testa um elemento da segunda
+metade, sempre pulando dezesseis páginas em cada metade.
 
 \begin{figure}
     \begin{code}{Rust}
@@ -233,6 +234,312 @@ pub fn find_worse_local(&self, element: ElementType) -> bool {
         \textit{worse-local-array}}
     \label{fig:worse local array find}
 \end{figure}
+
+As implementações da operação \textit{inc-less-than} para esses três tipos de
+\textit{array} (\textit{good-local-array}, \textit{bad-local-array},
+\textit{worse-local-array}) seguem o mesmo princípio que as implementações da
+operação \textit{find}, exceto que dessa vez ao invés de buscar um certo
+elemento, buscam elementos menores que um certo valor e incrementam tais
+elementos. Observe, nas figuras \ref{fig:good local array inc less than},
+\ref{fig:bad local array inc less than} e
+\ref{fig:worse local array inc less than}, que o \textit{array} é percorrido da
+mesma forma que na operação \textit{find}, mas dessa vez é por todo o
+\textit{array}.
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn inc_less_than_good_local(&mut self, element: ElementType) {
+    let mut i = 0;
+    while i < self.elements.len() {
+        if self.elements[i] < element {
+            self.elements[i]+= 1;
+        }
+        i += 1;
+    }
+}
+    \end{code}
+    \caption{Implementação da operação \textit{inc-less-than} para
+        \textit{good-local-array}}
+    \label{fig:good local array inc less than}
+\end{figure}
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn inc_less_than_bad_local(&mut self, element: ElementType) {
+    let jump_pages = 16;
+    let jump_elements = jump_pages * ELEMS_IN_PAGE;
+    let mut offset = 0;
+
+    while offset < jump_elements {
+        let mut jump_page = 0;
+        let mut index = jump_page * jump_pages + offset;
+        while index < self.elements.len() {
+            if self.elements[index] < element {
+                self.elements[index] += 1;
+            }
+            jump_page += 1;
+            index = jump_page * jump_pages + offset;
+        }
+        offset += 1;
+    }
+}
+    \end{code}
+    \caption{Implementação da operação \textit{inc-less-than} para
+        \textit{bad-local-array}}
+    \label{fig:bad local array inc less than}
+\end{figure}
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn inc_less_than_worse_local(&mut self, element: ElementType) {
+    let rounded = self.elements.len() + ELEMS_IN_PAGE - 1;
+    let pages = rounded / ELEMS_IN_PAGE;
+    let half_size = pages / 2 * ELEMS_IN_PAGE;
+    let jump_pages = 16;
+    let jump_elements = jump_pages * ELEMS_IN_PAGE;
+    let mut offset = 0;
+
+    while offset < jump_elements {
+        let mut jump_page = 0;
+        let mut in_bounds = true;
+        let mut index = jump_page * jump_pages + offset;
+        while in_bounds {
+            in_bounds = false;
+            let lower_index = index;
+            if lower_index < half_size {
+                if self.elements[lower_index] < element {
+                    self.elements[index] += 1;
+                }
+                in_bounds = true;
+            }
+            let upper_index = index + half_size;
+            if upper_index < self.elements.len() {
+                if self.elements[upper_index] < element {
+                    self.elements[index] =
+                        self.elements[index].wrapping_add(1);
+                }
+                in_bounds = true;
+            }
+            jump_page += 1;
+            index = jump_page * jump_pages + offset;
+        }
+        offset += 1;
+    }
+}
+    \end{code}
+    \caption{Implementação da operação \textit{inc-less-than} para
+        \textit{worse-local-array}}
+    \label{fig:worse local array inc less than}
+\end{figure}
+
+Adicionalmente, há uma implementação de \textit{array} com busca binária
+em um \textit{aray} ordenado, chamada de \textit{sorted-array}. As
+implementações de \textit{find} e \textit{inc-less-than} para
+\textit{sorted-array} se encontram na figura
+\ref{fig:sorted array find inc less than}. A ideia de usar essa estrutura de
+dados é: busca binária tem uma complexidade logaritma, melhor, em teoria, do que
+a complexidade linear da busca dos outros \textit{arrays}. No entanto, a busca
+binária não tem uma boa localidade, ela salta entre partes do \textit{array}.
+Deseja-se testar se a complexidade compensa mesmo com localidade ruim, ou se a
+localidade prejudicará significativamente a performance da busca binária.
+
+\begin{figure}
+    \begin{code}{Rust}
+fn binary_search(&self, element: ElementType) -> Result<usize, usize> {
+    let mut left = 0;
+    let mut right = self.elements.len();
+    while left < right {
+        let mid = left + (right - left) / 2;
+        match element.cmp(&self.elements[mid]) {
+            cmp::Ordering::Less => right = mid,
+            cmp::Ordering::Equal => return Ok(mid),
+            cmp::Ordering::Greater => left = mid + 1,
+        }
+    }
+    Err(left)
+}
+
+pub fn find_sorted(&self, element: ElementType) -> bool {
+    self.binary_search(element).is_ok()
+}
+
+pub fn inc_less_than_sorted(&mut self, element: ElementType) {
+    let mut upper_bound = match self.binary_search(element) {
+        Ok(upper_bound) => upper_bound,
+        Err(upper_bound) => upper_bound,
+    };
+
+    while upper_bound > 0 && self.elements[upper_bound - 1] >= element {
+        upper_bound -= 1;
+    }
+
+    let mut index = 0;
+    while index < upper_bound {
+        self.elements[index] = self.elements[index].wrapping_add(1);
+        index += 1;
+    }
+}
+    \end{code}
+    \caption{Implementação das operações \textit{find} e \textit{inc-less-than}
+        para \textit{sorted-array}}
+    \label{fig:sorted array find inc less than}
+\end{figure}
+
+Para listas simplesmente encadeadas,
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn find(&self, element: ElementType) -> bool {
+    let mut this = self;
+    while let Some(top) = &this.top {
+        if top.data == element {
+            return true;
+        }
+        this = &top.next;
+    }
+    false
+}
+    \end{code}
+    \caption{Implementação da operação \textit{find} para
+        \textit{linked-list}}
+    \label{fig:linked list find}
+\end{figure}
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn inc_less_than(&mut self, element: ElementType) {
+    let mut this = self;
+    while let Some(top) = &mut this.top {
+        if top.data < element {
+            top.data += 1;
+        }
+        this = &mut top.next;
+    }
+}
+    \end{code}
+    \caption{Implementação da operação \textit{inc-less-than} para
+        \textit{linked-list}}
+    \label{fig:linked list inc less than}
+\end{figure}
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn find_with_order(&self, element: ElementType) -> bool {
+    let mut this = self;
+    while let Some(node) = &this.root {
+        match element.cmp(&node.data) {
+            cmp::Ordering::Equal => return true,
+            cmp::Ordering::Less => this = &node.left,
+            cmp::Ordering::Greater => this = &node.right,
+        }
+    }
+    false
+}
+    \end{code}
+    \caption{Implementação da operação \textit{find} para
+        \textit{with-order-tree}}
+    \label{fig:with order tree find}
+\end{figure}
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn insert_with_order(&mut self, element: ElementType) -> bool {
+    let mut this = self;
+    loop {
+        match &mut this.root {
+            Some(node) => match element.cmp(&node.data) {
+                cmp::Ordering::Equal => return false,
+                cmp::Ordering::Less => this = &mut node.left,
+                cmp::Ordering::Greater => this = &mut node.right,
+            },
+            root @ None => {
+                *root = Some(Box::new(Node {
+                    data: element,
+                    left: Tree::empty(),
+                    right: Tree::empty(),
+                }));
+                return true;
+            },
+        }
+    }
+}
+
+pub fn inc_less_than_with_order(&mut self, element: ElementType) {
+    let mut this = &mut *self;
+    loop {
+        let mut found_branch = false;
+        if let Some(node) = &mut this.root {
+            if node.data < element {
+                found_branch = true;
+            }
+        }
+        if found_branch {
+            let mut nodes = vec![this.root.take()];
+            while let Some(maybe_node) = nodes.pop() {
+                if let Some(mut node) = maybe_node {
+                    self.insert_with_order(node.data + 1);
+                    nodes.push(node.left.root.take());
+                    nodes.push(node.right.root.take());
+                }
+            }
+            break;
+        }
+        match &mut this.root {
+            Some(node) => {
+                this = &mut node.left;
+            },
+            None => break,
+        }
+    }
+}
+    \end{code}
+    \caption{Implementação da operação \textit{inc-less-than} para
+        \textit{with-order-tree}}
+    \label{fig:with order tree inc less than}
+\end{figure}
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn find_without_order(&self, element: ElementType) -> bool {
+    let mut nodes: Vec<&Option<Box<Node>>> = vec![&self.root];
+    while let Some(maybe_node) = nodes.pop() {
+        if let Some(node) = maybe_node {
+            if node.data == element {
+                return true;
+            }
+            nodes.push(&node.left.root);
+            nodes.push(&node.right.root);
+        }
+    }
+    false
+}
+    \end{code}
+    \caption{Implementação da operação \textit{find} para
+        \textit{without-order-tree}}
+    \label{fig:without order tree find}
+\end{figure}
+
+\begin{figure}
+    \begin{code}{Rust}
+pub fn inc_less_than_without_order(&mut self, element: ElementType) {
+    let mut nodes: Vec<&mut Option<Box<Node>>> = vec![&mut self.root];
+    while let Some(maybe_node) = nodes.pop() {
+        if let Some(node) = maybe_node.as_mut() {
+            if node.data < element {
+                node.data += 1;
+            }
+            nodes.push(&mut node.left.root);
+            nodes.push(&mut node.right.root);
+        }
+    }
+}
+    \end{code}
+    \caption{Implementação da operação \textit{inc-less-than} para
+        \textit{without-order-tree}}
+    \label{fig:without order tree inc less than}
+\end{figure}
+
+\FloatBarrier
 
 \nocite{*}
 \printbibliography

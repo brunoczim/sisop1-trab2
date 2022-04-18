@@ -57,7 +57,7 @@ class SizeTimeChart(NamedTuple):
         ax.yaxis.grid(True)
         max_time = max(map(lambda lst: max(lst), self.times.values()))
         min_time = min(map(lambda lst: min(lst), self.times.values()))
-        yticks = 10
+        yticks = 18
         log_min_time = math.log(min_time, self.ybase)
         log_max_time = math.log(max_time, self.ybase)
         interval = (log_max_time  - log_min_time) / (yticks - 1)

@@ -68,16 +68,14 @@ impl Tree {
 
     pub fn find_with_order(&self, element: Element) -> bool {
         let mut this = self;
-        loop {
-            match &this.root {
-                Some(node) => match element.cmp(&node.data) {
-                    cmp::Ordering::Equal => return true,
-                    cmp::Ordering::Less => this = &node.left,
-                    cmp::Ordering::Greater => this = &node.right,
-                },
-                None => return false,
+        while let Some(node) = &this.root {
+            match element.cmp(&node.data) {
+                cmp::Ordering::Equal => return true,
+                cmp::Ordering::Less => this = &node.left,
+                cmp::Ordering::Greater => this = &node.right,
             }
         }
+        false
     }
 
     pub fn find_without_order(&self, element: Element) -> bool {
