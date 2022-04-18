@@ -385,7 +385,14 @@ pub fn inc_less_than_sorted(&mut self, element: ElementType) {
     \label{fig:sorted array find inc less than}
 \end{figure}
 
-Para listas simplesmente encadeadas,
+Em relação a listas simplesmente encadeadas, o objetivo é observar efitos da
+localidade de ter nodos alocados não necessariamente em sequência, ao invés de
+ter elementos em endereços contíguos. A implementação de \textit{find}, na
+figura \ref{fig:linked list find}, é uma busca linear que percorre pelos
+elementos em sequência, assim como \textit{inc-less-than}, na figura
+\ref{fig:linked list inc less than}. Note que há um potencial problema de
+localidade nessa sequência, porque o nodo seguinte pode estar em um endereço
+distante do nodo atual.
 
 \begin{figure}
     \begin{code}{Rust}
@@ -422,6 +429,14 @@ pub fn inc_less_than(&mut self, element: ElementType) {
     \label{fig:linked list inc less than}
 \end{figure}
 
+A respeito de árvores binárias, há um objetivo parecido com listas encadeadas:
+os nodos da árvore podem estar em endereços distantes. Entretanto, também há o
+objetivo de observar quanta vantagem há em aproveitar o fato de uma árvore estar
+ordenada para buscas. Na figura \ref{fig:with order tree find}, está a
+implementação da operação \textit{find} para árvores ordenadas
+(\textit{with-order-tree}), que assume que nodos à esquerda contêm valores
+menores do que o nodo atual, enquanto nodos à direita contêm valores maiores.
+
 \begin{figure}
     \begin{code}{Rust}
 pub fn find_with_order(&self, element: ElementType) -> bool {
@@ -443,52 +458,52 @@ pub fn find_with_order(&self, element: ElementType) -> bool {
 
 \begin{figure}
     \begin{code}{Rust}
-pub fn insert_with_order(&mut self, element: ElementType) -> bool {
-    let mut this = self;
-    loop {
-        match &mut this.root {
-            Some(node) => match element.cmp(&node.data) {
-                cmp::Ordering::Equal => return false,
-                cmp::Ordering::Less => this = &mut node.left,
-                cmp::Ordering::Greater => this = &mut node.right,
-            },
-            root @ None => {
-                *root = Some(Box::new(Node {
-                    data: element,
-                    left: Tree::empty(),
-                    right: Tree::empty(),
-                }));
-                return true;
-            },
+fn inc_all(&mut self) {
+    let mut nodes = vec![&mut self.root];
+    while let Some(maybe_node) = nodes.pop() {
+        if let Some(node) = maybe_node.as_mut() {
+            node.data += 1;
+            nodes.push(&mut node.left.root);
+            nodes.push(&mut node.right.root);
         }
     }
 }
 
-pub fn inc_less_than_with_order(&mut self, element: ElementType) {
-    let mut this = &mut *self;
+fn remove_duplicated_max(&mut self, parent: ElementType) {
+    let mut this = self;
     loop {
-        let mut found_branch = false;
-        if let Some(node) = &mut this.root {
-            if node.data < element {
-                found_branch = true;
-            }
-        }
-        if found_branch {
-            let mut nodes = vec![this.root.take()];
-            while let Some(maybe_node) = nodes.pop() {
-                if let Some(mut node) = maybe_node {
-                    self.insert_with_order(node.data + 1);
-                    nodes.push(node.left.root.take());
-                    nodes.push(node.right.root.take());
-                }
+        let (is_max, is_duplicated) = match this.root.as_ref() {
+            Some(node) => (node.right.root.is_none(), node.data == parent),
+            None => break,
+        };
+        if is_max {
+            if is_duplicated {
+                let mut node = this.root.take().unwrap();
+                this.root = node.left.root.take();
             }
             break;
         }
-        match &mut this.root {
-            Some(node) => {
-                this = &mut node.left;
-            },
-            None => break,
+        this = &mut this.root.as_mut().unwrap().right;
+    }
+}
+
+pub fn inc_less_than_with_order(&mut self, element: ElementType) {
+    if let Some(mut this_node) = self.root.as_mut() {
+        if this_node.data < element {
+            self.inc_all();
+        } else {
+            loop {
+                let found_branch = match this_node.left.root.as_ref() {
+                    Some(node) => node.data < element,
+                    None => break,
+                };
+                if found_branch {
+                    this_node.left.inc_all();
+                    this_node.left.remove_duplicated_max(this_node.data);
+                    break;
+                }
+                this_node = this_node.left.root.as_mut().unwrap();
+            }
         }
     }
 }

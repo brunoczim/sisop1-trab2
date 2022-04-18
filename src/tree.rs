@@ -92,31 +92,52 @@ impl Tree {
         false
     }
 
-    pub fn inc_less_than_with_order(&mut self, element: Element) {
-        let mut this = &mut *self;
-        loop {
-            let mut found_branch = false;
-            if let Some(node) = &mut this.root {
-                if node.data < element {
-                    found_branch = true;
-                }
+    fn inc_all(&mut self) {
+        let mut nodes = vec![&mut self.root];
+        while let Some(maybe_node) = nodes.pop() {
+            if let Some(node) = maybe_node.as_mut() {
+                node.data = node.data.wrapping_add(1);
+                nodes.push(&mut node.left.root);
+                nodes.push(&mut node.right.root);
             }
-            if found_branch {
-                let mut nodes = vec![this.root.take()];
-                while let Some(maybe_node) = nodes.pop() {
-                    if let Some(mut node) = maybe_node {
-                        self.insert_with_order(node.data.wrapping_add(1));
-                        nodes.push(node.left.root.take());
-                        nodes.push(node.right.root.take());
-                    }
+        }
+    }
+
+    fn remove_duplicated_max(&mut self, parent: Element) {
+        let mut this = self;
+        loop {
+            let (is_max, is_duplicated) = match this.root.as_ref() {
+                Some(node) => (node.right.root.is_none(), node.data == parent),
+                None => break,
+            };
+            if is_max {
+                if is_duplicated {
+                    let mut node = this.root.take().unwrap();
+                    this.root = node.left.root.take();
                 }
                 break;
             }
-            match &mut this.root {
-                Some(node) => {
-                    this = &mut node.left;
-                },
-                None => break,
+            this = &mut this.root.as_mut().unwrap().right;
+        }
+    }
+
+    pub fn inc_less_than_with_order(&mut self, element: Element) {
+        if let Some(mut this_node) = self.root.as_mut() {
+            if this_node.data < element {
+                self.inc_all();
+            } else {
+                loop {
+                    let found_branch = match this_node.left.root.as_ref() {
+                        Some(node) => node.data < element,
+                        None => break,
+                    };
+                    if found_branch {
+                        this_node.left.inc_all();
+                        this_node.left.remove_duplicated_max(this_node.data);
+                        break;
+                    }
+                    this_node = this_node.left.root.as_mut().unwrap();
+                }
             }
         }
     }
@@ -284,7 +305,7 @@ mod test {
 
     #[test]
     fn inc_less_than() {
-        let cut_element = (ELEMS_IN_PAGE * 32 + ELEMS_IN_PAGE / 2) as Element;
+        let cut_element = (ELEMS_IN_PAGE * 4 + ELEMS_IN_PAGE / 2) as Element;
 
         let mut tree_with_order = Tree::empty();
         let mut tree_without_order = Tree::empty();
