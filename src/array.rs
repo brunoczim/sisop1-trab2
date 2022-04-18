@@ -196,7 +196,9 @@ impl Array {
             Err(index) => index,
         };
 
-        while index > 0 && self.elements[index] >= element {
+        while index > 0
+            && (index >= self.elements.len() || self.elements[index] >= element)
+        {
             index -= 1;
         }
 

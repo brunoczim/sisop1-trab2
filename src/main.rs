@@ -20,7 +20,8 @@ use std::{
 type Element = u64;
 
 const ELEMS_IN_PAGE: usize = 0x1000 / mem::size_of::<Element>();
-const SIZES: [usize; 8] = [
+const SIZES: [usize; 9] = [
+    ELEMS_IN_PAGE / 4usize.pow(3),
     ELEMS_IN_PAGE / 4usize.pow(2),
     ELEMS_IN_PAGE / 4usize.pow(1),
     ELEMS_IN_PAGE * 4usize.pow(0),

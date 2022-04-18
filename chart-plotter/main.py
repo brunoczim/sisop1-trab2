@@ -132,8 +132,8 @@ class SizeTimeChart(NamedTuple):
             for i in range(yticks)])
         ax.set_xticks(range(len(self.sizes)))
         ax.legend()
-        fig.set_figwidth(10)
-        fig.set_figheight(10)
+        fig.set_figwidth(8)
+        fig.set_figheight(8)
         fig.savefig(
                 os.path.join(output_dir, f'{self.name}.png'),
                 bbox_inches='tight') 
@@ -249,8 +249,6 @@ def make_charts(rows: List[Row]) -> List[SizeTimeChart]:
                 key='without-order-tree',
                 name='binary tree not assuming correct order')]
 
-    modes_text = ",".join(map(lambda mode: mode.name, modes))
-
     for operation in operations:
         if operation.key == 'create':
             collections = create_collections
@@ -260,7 +258,7 @@ def make_charts(rows: List[Row]) -> List[SizeTimeChart]:
         for mode in modes:
             name = f'collections-{operation.key}-{mode.key}'
             title = (f'Operation "{operation.name}" in "{mode.name}"'
-                    + ' mode, in different collections')
+                    + ' mode for all collections')
             charts.append(make_collections_chart(
                 name,
                 rows,
@@ -272,7 +270,7 @@ def make_charts(rows: List[Row]) -> List[SizeTimeChart]:
         for collection in collections:
             name = f'modes-{operation.key}-{collection.display_key()}'
             title = (f'Operation "{operation.name}" with "{collection.name}"'
-                    + f' collection, in all "{modes_text}" modes')
+                    + f' collection for all modes')
             charts.append(make_modes_chart(
                 name,
                 rows,

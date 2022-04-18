@@ -2,7 +2,7 @@
 
 set -e
 
-rm output.csv
+rm -f output.csv
 
 cargo build
 time cargo run -- -o output.csv -m debug
