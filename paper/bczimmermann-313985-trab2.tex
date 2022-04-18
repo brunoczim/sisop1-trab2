@@ -139,6 +139,13 @@ o terceiro, até que o último elemento de cada grupo seja testado. A expectativ
 é que essa implementação pule páginas com muita frequência e force o TLB a
 substituir páginas.
 
+O código na figura \ref{fig:worse local array find} implementa essa operação
+para \textit{worse-local-array}, que, em teoria, teria localidade pior do que
+\textit{bad-local-array}. Essa implementação, além de pular dezesseis páginas,
+divide o \textit{array} em dois, e intercala entre as duas metades: primeiro
+testa um elemento da primeira metade, depois testa um elemento da segunda
+metade, sempre pulando dezesseis páginas em cada metade.
+
 \begin{figure}
     \begin{code}{Rust}
 pub fn find_good_local(&self, element: ElementType) -> bool {
