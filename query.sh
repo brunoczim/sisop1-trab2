@@ -4,5 +4,5 @@ set -e
 
 cd analysis \
     && . venv/bin/activate \
-    && mypy plot.py \
-    && python plot.py ../output.csv ../charts
+    && mypy query.py \
+    && python query.py -f ../output.csv "$@"

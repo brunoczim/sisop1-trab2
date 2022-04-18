@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-cd chart-plotter \
+cd analysis \
     && rm -rf venv \
     && python -m venv venv \
     && . venv/bin/activate \

@@ -2,8 +2,8 @@
 Cargo.lock
 #/output.csv
 #/charts
-/chart-plotter/venv
-/chart-plotter/.mypy_cache
+/analysis/venv
+/analysis/.mypy_cache
 /paper/*.aux
 /paper/*.bcf
 /paper/*.fdb_latexmk
