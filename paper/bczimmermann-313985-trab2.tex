@@ -456,6 +456,21 @@ pub fn find_with_order(&self, element: ElementType) -> bool {
     \label{fig:with order tree find}
 \end{figure}
 
+Considerando a operação \textit{inc-less-than} sobre \textit{with-order-tree},
+na figura \ref{fig:with order tree inc less than}, a implementação é um pouco
+mais complicada. Não é possível simplesmente atualizar os dados nos próprios
+nodos porque isso pode quebrar a ordenação da árvore. Note que uma possível
+implementação seria buscar uma sub-árvore onde todos elementos são menores que o
+valor estipulado (ou seja, onde a raiz da sub-árvore é menor que tal valor), e
+então incrementar os dados de cada nodo.
+
+No entanto, para não quebrar a ordenação da árvore, bastaria apenas remover o
+maior nodo da sub-árvore se, após o incremento, for igual ao valor do nodo pai
+da sub-árvore, porque estaria duplicado. Isso porque a busca pela sub-árvore é
+sempre feita navegando à esquerda, os filhos à esquerda de um nodo sempre são
+estritamente menores que ele, e ao incrementarmos algum filho, o pior que pode
+ocorrer é o filho se tornar igual ao pai.
+
 \begin{figure}
     \begin{code}{Rust}
 fn inc_all(&mut self) {
@@ -513,6 +528,15 @@ pub fn inc_less_than_with_order(&mut self, element: ElementType) {
     \label{fig:with order tree inc less than}
 \end{figure}
 
+A versão sem ordenamento da árvore, chamada de \textit{without-order-tree},
+precisa buscar elementos nos dois lados da árvore. Para evitar a recursão, uma
+pilha manual de elementos é usada, tanto na operação \textit{find}
+(\ref{fig:without order tree find}), quanto na operação
+\textit{inc-less-than} (figura \ref{fig:without order tree inc less than}). Uma
+vantagem dessa versão da árvore é que o incremento não precisa se preocupar com
+ordenamento correto. A ideia é comparar com a versão ordenada e ver se o
+ordenamento é de fato uma vantagem.
+
 \begin{figure}
     \begin{code}{Rust}
 pub fn find_without_order(&self, element: ElementType) -> bool {
@@ -555,6 +579,46 @@ pub fn inc_less_than_without_order(&mut self, element: ElementType) {
 \end{figure}
 
 \FloatBarrier
+
+\section{Metodologia}
+
+Para comparar diferentes estruturas de dados (e variantes), uma mesma
+metodologia de medida de performance foi utilizada. Para as duas operações,
+\textit{find} e \textit{inc-less-than}, quatro elementos são selecionados, e o
+tempo para completar as quatro chamadas é medido. Então é feita uma medida de
+tempo para cada operação, para cada estrutura de dados (e variante), para cada
+modo (sem otimizção vs. com otimização), para cada tamanho de entrada.
+
+Dentro de cada modo e de cada tamanho $N$, gera-se $N$ elementos aleatórios,
+e constrói-se cada estrutura usando essa sequência. Então são selecionados
+quatro elementos: o primeiro quartil (da sequência original), o segundo quartil,
+o terceiro quartil e um valor aleatório gerado em cada operação. Então mede-se o
+tempo de \textit{inc-less-than} de cada estrutura de dados, e mede-se o tempo de
+cada \textit{find}. Os tamanhos escolhidos foram:
+
+\begin{itemize}
+    \item $64 B = 4096 \cdot 4^{-3}$;
+    \item $256 B = 4096 \cdot 4^{-2}$;
+    \item $1 KiB = 4096 \cdot 4^{-1}$;
+    \item $4 KiB = 4096 \cdot 4^{0}$;
+    \item $16 KiB = 4096 \cdot 4^{1}$;
+    \item $64 KiB = 4096 \cdot 4^{2}$;
+    \item $256 KiB = 4096 \cdot 4^{3}$;
+    \item $1 MiB = 4096 \cdot 4^{4}$;
+    \item $4 MiB = 4096 \cdot 4^{5}$.
+\end{itemize}
+
+Tanto as estruturas de dados quanto a medição de performance foram escritas na
+linguagem Rust, e o modo ``sem omitização'' corresponde ao modo
+``\textit{debug}'', e ``com otimização'' corresponde ao modo
+``\textit{release}''. Os resultados das medidas foram registrados em um arquivo
+CSV com linhas no formato: modo, tamanho em \textit{bytes}, operação, estrutura
+de dados, tempo em nanossegundos. Análises dos resultados (como gráficos) foram
+feitas na linguagem Python.
+
+\section{Resultados}
+
+\section{Conclusão}
 
 \nocite{*}
 \printbibliography
