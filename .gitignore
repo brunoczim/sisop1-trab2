@@ -4,6 +4,7 @@ Cargo.lock
 #/charts
 /analysis/venv
 /analysis/.mypy_cache
+/analysis/__pycache__
 /paper/*.aux
 /paper/*.bcf
 /paper/*.fdb_latexmk

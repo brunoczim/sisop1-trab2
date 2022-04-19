@@ -142,7 +142,7 @@ def make_charts(rows: List[Row]) -> List[SizeTimeChart]:
             Operation(key='find', name='search for element'),
             Operation(
                 key='inc-less-than',
-                name='increment all elements smaller than a certain value') ]
+                name='increment elements smaller than X') ]
 
     create_collections = [
             Collection(

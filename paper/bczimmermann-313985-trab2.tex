@@ -618,7 +618,132 @@ feitas na linguagem Python.
 
 \section{Resultados}
 
-\section{Conclusão}
+Em um aspecto geral, o \textit{array} ordenado (\textit{sorted-array} e a árvore
+binária ordenada (\textit{with-order-tree}) conseguiram a melhor performance no
+modo \textit{debug}. Enquanto isso, no modo \textit{release},
+\textit{sorted-array} e \textit{with-order-tree} conseguiram a melhor
+performance para \textit{find}, mas, para a operação \textit{inc-less-than},
+\textit{sorted-array} atingiu um tempo disparadamente menor. Generalizando, o
+``vencedor'' foi \textit{sorted-array}. Os resultados podem ser visualizados nos
+gráficos das figuras \ref{fig:collection find debug},
+\ref{fig:collection find release}, \ref{fig:collection inc less than debug} e
+\ref{fig:collection inc less than release}, em escala logarítmica nos dois
+eixos.
+
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=15cm, keepaspectratio]
+        {../charts/collections-find-debug.png}
+    \end{center}
+    \caption{Operação \textit{find} no modo ``\textit{debug}''
+        (sem otimizações) para todas estruturas de dados}
+    \label{fig:collection find debug}
+\end{figure}
+
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=15cm, keepaspectratio]
+        {../charts/collections-find-release.png}
+    \end{center}
+    \caption{Operação \textit{find} no modo ``\textit{release}''
+        (com otimizações) para todas estruturas de dados}
+    \label{fig:collection find release}
+\end{figure}
+
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=16cm, keepaspectratio]
+        {../charts/collections-inc-less-than-debug.png}
+    \end{center}
+    \caption{Operação \textit{inc less than} no modo ``\textit{debug}''
+        (sem otimizações) para todas estruturas de dados}
+    \label{fig:collection inc less than debug}
+\end{figure}
+
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=16cm, keepaspectratio]
+        {../charts/collections-inc-less-than-release.png}
+    \end{center}
+    \caption{Operação \textit{inc-less-than} no modo ``\textit{release}''
+        (com otimizações) para todas estruturas de dados}
+    \label{fig:collection inc less than release}
+\end{figure}
+
+Observando-se o gráfico da figura \ref{fig:collection find release},
+observa-se que a ordenação na árvore binária é sim uma grande vantagem para
+a operação de busca \textit{find}, ao comparar-se a versão com ordenamento e a
+sem ordenamento. No entanto, para a operação \textit{inc-less-than}, na figura
+\ref{fig:collection inc less than release}, observa-se que as duas versões da
+árvore tiveram performance bastante similar, e apesar da versão com ordenamento
+ter se saído um pouco melhor, não é algo significativo, e então, nessa operação,
+o ordenamento não aparenta trazer vantagem.
+
+Pode-se dizer que até há uma pequena vantagem ao usar ordenamento em árvores,
+na operação \textit{inc-less-than}, com entradas de tamanho até
+$16 KiB$, mas a partir de $64 KiB$, a performance das duas árvores converge.
+Possivelmente, isso ocorre porque com entradas maiores, a chance da árvore
+navegar por nodos em endereços em diferentes páginas é maior.
+
+Na figura \ref{fig:collection inc less than release}, também se pode notar que
+as versões sem ordenação do \textit{array} )(\textit{good-local-array},
+\textit{bad-local-array} e \textit{worse-local-array}) tiveram uma diferença
+significativa de performance entre a versão \textit{good-} e as versões
+\textit{bad-} e \textit{worse-}. Para $4MiB$, a versão \textit{good-} conseguiu
+$5.431 ms$, enquanto a versão \textit{bad-} atingiu $2.865 s$, e a versão
+\textit{worse-} atingiu $2.851 s$, e a diferença é consistente para os vários
+tamanhos de entrada usados.
+
+No entanto, percebe-se que entre a versão \textit{bad-} e a versão
+\textit{worse-} não há tanta diferença, e inclusive, para alguns tamanhos de
+entrada, a versão \textit{worse-} surpreendentemente performa com um pouco menos
+de tempo que a versão \textit{bad-}. Isso se repete na figura
+\ref{fig:collection find release}, onde em alguns casos a versão
+\textit{worse-} tem um desempenho melhor de forma levemente considerável,
+em relação à versão \textit{bad-}. A respeito desses dois \textit{arrays},
+também é notável que a partir do tamanho de entrada $4KiB$ (uma página),
+a curva do tempo desses fica mais íngreme.
+
+A lista encadeada \textit{linked-list} parece ter tido uma performance
+intermediária, e inclusive foi mais rápida que árvores ordenadas na operação
+\textit{inc-less-than} (figura \ref{fig:collection inc less than release}). No
+entanto, \textit{sorted-array} e \textit{good-local-array} ainda superaram a
+lista encadeada. É bom notar, contudo, que aqui se fala da execução com
+otimizações ligadas, porém, sem otimizações (\textit{debug}), as listas
+encadeadas superam \textit{good-local-array}
+(figura \ref{fig:collection find debug}).
+
+\FloatBarrier
+
+\section{Considerações Finais}
+
+Algumas conclusões interessantes podem ser feitas. Por exemplo, a partir do
+resultado de \textit{bad-local-array} e \textit{worse-local-array}, pode-se
+concluir que, se as páginas já estão sendo saltadas em uma grande quantidade
+($16$ no nosso caso), não faz muita diferença intercalar entre duas metades de
+um \textit{array} ou não, diferente do esperado. Uma explicação para tal é
+que o TLB do sistema não leva em conta a proximidade das páginas, na verdade,
+a vantagem está em endereços próximos em uma mesma página.
+
+Além disso, pode-se verificar que, apesar do \textit{sorted-array} saltar entre
+endereços muito distantes, a complexidade logarítimica da busca binária
+compensa, porque a quantidade de endereços visitados é muito menor do que a
+quantidade de endereços visitados por outros \textit{arrays}, por exemplo,
+que podem acabar vasculhando todos elementos. Na verdade, uma observação
+interessante é que a distância dos endereços da busca binária diminui a cada
+iteração, porque a janela da busca diminui, então não ocorrem tantos saltos de
+páginas como o esperado.
+
+Outro fato interessante é que a vantagem de uma árvore ordenada sobre uma
+árvore não-ordenada diminui e torna-se quase nula à medida em que se aumenta o
+número de páginas em função do tamanho da entrada na operação de incremento.
+É tentador associar isso à ideia de que a complexidade do algoritmo pode ser
+irrelevante diante de uma alta quantidade de \textit{page misses} na TLB, mas na
+realidade as duas complexidades não estão muito distantes: $O(max(m, n+m))$ versus
+$O(n + m)$, onde $n$ é o tamanho da árvore, $m$ é o valor solicitado, e contam
+como passos cada iteração.
+
+
 
 \nocite{*}
 \printbibliography
