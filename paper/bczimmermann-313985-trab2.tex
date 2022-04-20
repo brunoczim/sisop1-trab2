@@ -56,33 +56,31 @@ https://github.com/brunoczim/sisop1-trab2
 \section{Introdução}
 
 Memória virtual é um mecanismo de abstração da memória física que dá a impressão
-a um processo de que o espaço de memória onde ele está pertence todo a ele. Uma
-forma de implementar esse mecanismo, usada em processadores x86-64, em sistemas
-como Linux, é paginação de memória. Nesse sistema, a memória é dividida em
-páginas de tamanho fixo, e, no caso de Linux x86-64, o tamanho é 4KiB.
+a um processo de que o espaço de memória onde ele está pertence todo ao
+processo. Uma forma de implementar esse mecanismo, usada em processadores
+x86-64 em sistemas como Linux, é paginação de memória. Nesse sistema, a memória
+é dividida em páginas de tamanho fixo, e, no caso de Linux x86-64, o tamanho é
+4KiB.
 
 Nesse esquema, há páginas virtuais e páginas físicas. Páginas virtuais são
 mapeadas para páginas físicas, mas processos enxergam apenas as páginas
 virtuais. Para realizar a tradução entre endereços, é necessário manter tabelas
-de páginas. As páginas virtuais podem não estar mapeadas ainda, e nesse caso,
-ao tentar acessá-las, o processador gera um sinal chamado
-``\textit{Page Fault}'', e então o sistema operacional mapeia a página virtual
-para uma página física.
+de páginas, onde páginas virtuais são associadas a páginas físicas. As virtuais
+podem não estar mapeadas ainda, e nesse caso, ao tentar acessá-las, o
+processador gera um sinal chamado ``\textit{Page Fault}''. Então, ao receber o
+sinal, o sistema operacional mapeia a página virtual para uma página física.
 
-É possível que uma página seja armazenada em disco. Quando um processo tenta
-acessar um endereço virtual, busca-se na tabela de páginas a entrada da página
-virtual do endereço. Se não está mapeada (\textit{bit} de validade valendo $0$),
-busca-se do disco a página e define-se o \textit{bit} de validade para $1$. Em
-ambos os casos, ao final, obtém-se o número da página física, e dentro dela, o
-enedereço físico é acessado.
+É possível que uma página seja armazenada em disco, e, quando ela não está
+carregada na tabela, ela precisa ser carregada do disco. Para lidar com isso, há
+na tabela, associada a uma entrada, um \textit{bit} de validade, que indica se
+uma página está ausente ($0$) ou se está presente e carregada ($1$). Além do
+\textit{bit} de valide, há alguns outros \textit{bits} de controle.
 
-Na tabela de páginas, há alguns \textit{bits} de controle para cada entrada.
-O \textit{bit} mencionado acima (\textit{bit} de validade) indica se a entrada
-na tabela é válida, ou seja, se há um mapeamento válido para a página virtual
-associada à entrada. Há ainda o \textit{bit} ``\textit{dirty}'', que indica se a
-página física associada àquela entrada na tabela está incosistente com o disco,
-e no caso de substituição LRU (\textit{Least Recently Used}), um bit de
-referência, indicando se essa entrada foi usada recentemente.
+Por exemplo, há o \textit{bit} ``\textit{dirty}'', que indica se a
+página física associada àquela entrada na tabela está incosistente com o disco.
+Também podem estar presentes \textit{bits} para controle de algoritmos de
+subtituição, no caso do algoritmo LRU (\textit{Least Recently Used}), um
+\textit{bit} de referência, indicando se essa entrada foi usada recentemente.
 
 A tabela de páginas é finita, e portanto, quando uma nova página precisa ser
 carregada, é possível que outra precise ser descarregada. Existem várias formas
@@ -95,18 +93,20 @@ Além da tabela de páginas, existe um \textit{cache} de páginas, chamado TLB
 (\textit{Translation-Lookaside Buffer}). O TLB se assemelha a tabela de
 páginas convencional, mas é implementado em \textit{hardware}, então, se uma
 página está no TLB, faz-se apenas um acesso à memória, em comparação aos
-dois acesso pela tabela de página tradicional. Como é um \textit{cache}, ele não
-armazena a estrutura toda das tabelas de páginas, mas apenas páginas
+dois acessos pela tabela de página tradicional. Como é um \textit{cache}, ele
+não armazena a estrutura toda das tabelas de páginas, mas apenas páginas
 específicas, e portanto a TLB também guarda uma \textit{tag} para identificar a
 página guardada em uma entrada.
 
-Portanto, para aproveitar a performance do TLB, ou até mesmo da tabela de
+Com isso, para aproveitar a performance do TLB, ou até mesmo da tabela de
 páginas convencional, é importante que os programas busquem ter boa localidade.
 Por exemplo, sequências de endereços que ``pulam'' páginas podem acabar fazendo
-mau uso da TLB. Neste artigo, vamos estudar os efeitos de usar-se diferentes
+mau uso da TLB. Neste artigo, serão estudados os efeitos de se usar diferentes
 estruturas de dados, com diferentes algoritmos, e com diferentes localidades.
 
 \section{Localidades e Programas Estudados}
+
+\FloatBarrier
 
 Para explorar efeitos de localidade sobre a TLB, foram experimentadas três
 estruturas de dados: \textit{arrays}, árvores binárias, e listas simplesmente
@@ -151,8 +151,8 @@ pub fn find_good_local(&self, element: ElementType) -> bool {
 A implementação da operação \textit{find} para \textit{bad-local-array} está na
 figura \ref{fig:bad local array find}, que ao invés de percorrer em ordem, testa
 o primeiro elemento da primeira página do \textit{array}, e então testa o
-primeiro elemento da décima sexta página, então o primeiro elmento da trigésima
-segunda página, até testar o primeiro elemento de cada grupo de dezesseis
+primeiro elemento da décima sétima página, então o primeiro elmento da trigésima
+terceira página, até testar o primeiro elemento de cada grupo de dezesseis
 páginas. Depois disso, ele testa o segundo elemento de cada grupo, e então
 o terceiro, até que o último elemento de cada grupo seja testado. A expectativa
 é que essa implementação pule páginas com muita frequência e force o TLB a
@@ -189,7 +189,7 @@ para \textit{worse-local-array}, que, em teoria, teria localidade pior do que
 \textit{bad-local-array}. Essa implementação, além de pular dezesseis páginas,
 divide o \textit{array} em dois, e intercala entre as duas metades: primeiro
 testa um elemento da primeira metade, depois testa um elemento da segunda
-metade, sempre pulando dezesseis páginas em cada metade.
+metade, sempre pulando dezesseis páginas dentro de cada metade.
 
 \begin{figure}
     \begin{code}{Rust}
@@ -239,7 +239,7 @@ As implementações da operação \textit{inc-less-than} para esses três tipos 
 \textit{array} (\textit{good-local-array}, \textit{bad-local-array},
 \textit{worse-local-array}) seguem o mesmo princípio que as implementações da
 operação \textit{find}, exceto que dessa vez ao invés de buscar um certo
-elemento, buscam elementos menores que um certo valor e incrementam tais
+elemento, buscam elementos menores que um certo dado valor, e incrementam tais
 elementos. Observe, nas figuras \ref{fig:good local array inc less than},
 \ref{fig:bad local array inc less than} e
 \ref{fig:worse local array inc less than}, que o \textit{array} é percorrido da
@@ -338,8 +338,8 @@ implementações de \textit{find} e \textit{inc-less-than} para
 \textit{sorted-array} se encontram na figura
 \ref{fig:sorted array find inc less than}. A ideia de usar essa estrutura de
 dados é: busca binária tem uma complexidade logaritma, melhor, em teoria, do que
-a complexidade linear da busca dos outros \textit{arrays}. No entanto, a busca
-binária não tem uma boa localidade, ela salta entre partes do \textit{array}.
+a complexidade linear da busca dos outros \textit{arrays}. Contudo, a busca
+binária não tem uma boa localidade: ela salta entre partes do \textit{array}.
 Deseja-se testar se a complexidade compensa mesmo com localidade ruim, ou se a
 localidade prejudicará significativamente a performance da busca binária.
 
@@ -385,7 +385,7 @@ pub fn inc_less_than_sorted(&mut self, element: ElementType) {
     \label{fig:sorted array find inc less than}
 \end{figure}
 
-Em relação a listas simplesmente encadeadas, o objetivo é observar efitos da
+Em relação a listas simplesmente encadeadas, o objetivo é observar efeitos da
 localidade de ter nodos alocados não necessariamente em sequência, ao invés de
 ter elementos em endereços contíguos. A implementação de \textit{find}, na
 figura \ref{fig:linked list find}, é uma busca linear que percorre pelos
@@ -465,11 +465,11 @@ valor estipulado (ou seja, onde a raiz da sub-árvore é menor que tal valor), e
 então incrementar os dados de cada nodo.
 
 No entanto, para não quebrar a ordenação da árvore, bastaria apenas remover o
-maior nodo da sub-árvore se, após o incremento, for igual ao valor do nodo pai
-da sub-árvore, porque estaria duplicado. Isso porque a busca pela sub-árvore é
-sempre feita navegando à esquerda, os filhos à esquerda de um nodo sempre são
-estritamente menores que ele, e ao incrementarmos algum filho, o pior que pode
-ocorrer é o filho se tornar igual ao pai.
+maior nodo da sub-árvore, caso ele for igual ao valor do nodo pai da sub-árvore
+após o incremento, porque estaria duplicado. Isso porque a busca pela sub-árvore
+é sempre feita navegando à esquerda, os filhos à esquerda de um nodo sempre são
+estritamente menores que ele, e, ao incrementarmos algum filho, o pior que pode
+ocorrer é o filho se tornar igual ao pai, nunca maior.
 
 \begin{figure}
     \begin{code}{Rust}
@@ -531,7 +531,7 @@ pub fn inc_less_than_with_order(&mut self, element: ElementType) {
 A versão sem ordenamento da árvore, chamada de \textit{without-order-tree},
 precisa buscar elementos nos dois lados da árvore. Para evitar a recursão, uma
 pilha manual de elementos é usada, tanto na operação \textit{find}
-(\ref{fig:without order tree find}), quanto na operação
+(figura \ref{fig:without order tree find}), quanto na operação
 \textit{inc-less-than} (figura \ref{fig:without order tree inc less than}). Uma
 vantagem dessa versão da árvore é que o incremento não precisa se preocupar com
 ordenamento correto. A ideia é comparar com a versão ordenada e ver se o
@@ -585,16 +585,17 @@ pub fn inc_less_than_without_order(&mut self, element: ElementType) {
 Para comparar diferentes estruturas de dados (e variantes), uma mesma
 metodologia de medida de performance foi utilizada. Para as duas operações,
 \textit{find} e \textit{inc-less-than}, quatro elementos são selecionados, e o
-tempo para completar as quatro chamadas é medido. Então é feita uma medida de
-tempo para cada operação, para cada estrutura de dados (e variante), para cada
-modo (sem otimizção vs. com otimização), para cada tamanho de entrada.
+tempo para completar as quatro chamadas é medido. A partir disso, é feita uma
+medida de tempo para cada operação, para cada estrutura de dados (e variante),
+para cada modo (sem otimizção vs. com otimização), para cada tamanho de entrada.
 
-Dentro de cada modo e de cada tamanho $N$, gera-se $N$ elementos aleatórios,
-e constrói-se cada estrutura usando essa sequência. Então são selecionados
-quatro elementos: o primeiro quartil (da sequência original), o segundo quartil,
-o terceiro quartil e um valor aleatório gerado em cada operação. Então mede-se o
-tempo de \textit{inc-less-than} de cada estrutura de dados, e mede-se o tempo de
-cada \textit{find}. Os tamanhos escolhidos foram:
+Dentro de cada modo e de cada tamanho $N$, gera-se uma sequência de $N$
+elementos aleatórios, e constrói-se cada estrutura usando essa sequência. Após
+isso, são selecionados quatro elementos: o primeiro quartil (da sequência
+original), o segundo quartil, o terceiro quartil e um valor aleatório gerado em
+cada operação. Então, mede-se o tempo de \textit{inc-less-than} de cada
+estrutura de dados, e mede-se o tempo de cada \textit{find}. Os tamanhos
+escolhidos foram:
 
 \begin{itemize}
     \item $64 B = 4096 \cdot 4^{-3}$;
@@ -675,9 +676,7 @@ observa-se que a ordenação na árvore binária é sim uma grande vantagem para
 a operação de busca \textit{find}, ao comparar-se a versão com ordenamento e a
 sem ordenamento. No entanto, para a operação \textit{inc-less-than}, na figura
 \ref{fig:collection inc less than release}, observa-se que as duas versões da
-árvore tiveram performance bastante similar, e apesar da versão com ordenamento
-ter se saído um pouco melhor, não é algo significativo, e então, nessa operação,
-o ordenamento não aparenta trazer vantagem.
+árvore tiveram performance bastante similar.
 
 Pode-se dizer que até há uma pequena vantagem ao usar ordenamento em árvores,
 na operação \textit{inc-less-than}, com entradas de tamanho até
@@ -686,30 +685,30 @@ Possivelmente, isso ocorre porque com entradas maiores, a chance da árvore
 navegar por nodos em endereços em diferentes páginas é maior.
 
 Na figura \ref{fig:collection inc less than release}, também se pode notar que
-as versões sem ordenação do \textit{array} )(\textit{good-local-array},
+as versões sem ordenação do \textit{array} (\textit{good-local-array},
 \textit{bad-local-array} e \textit{worse-local-array}) tiveram uma diferença
 significativa de performance entre a versão \textit{good-} e as versões
 \textit{bad-} e \textit{worse-}. Para $4MiB$, a versão \textit{good-} conseguiu
 $5.431 ms$, enquanto a versão \textit{bad-} atingiu $2.865 s$, e a versão
-\textit{worse-} atingiu $2.851 s$, e a diferença é consistente para os vários
-tamanhos de entrada usados.
+\textit{worse-} atingiu $2.851 s$. Além do mais, a diferença é consistente para
+os vários tamanhos de entrada usados.
 
 No entanto, percebe-se que entre a versão \textit{bad-} e a versão
 \textit{worse-} não há tanta diferença, e inclusive, para alguns tamanhos de
 entrada, a versão \textit{worse-} surpreendentemente performa com um pouco menos
 de tempo que a versão \textit{bad-}. Isso se repete na figura
 \ref{fig:collection find release}, onde em alguns casos a versão
-\textit{worse-} tem um desempenho melhor de forma levemente considerável,
+\textit{worse-} tem um desempenho melhor, ainda que levemente,
 em relação à versão \textit{bad-}. A respeito desses dois \textit{arrays},
 também é notável que a partir do tamanho de entrada $4KiB$ (uma página),
 a curva do tempo desses fica mais íngreme.
 
 A lista encadeada \textit{linked-list} parece ter tido uma performance
 intermediária, e inclusive foi mais rápida que árvores ordenadas na operação
-\textit{inc-less-than} (figura \ref{fig:collection inc less than release}). No
-entanto, \textit{sorted-array} e \textit{good-local-array} ainda superaram a
+\textit{inc-less-than} (figura \ref{fig:collection inc less than release}).
+Entretanto, \textit{sorted-array} e \textit{good-local-array} ainda superaram a
 lista encadeada. É bom notar, contudo, que aqui se fala da execução com
-otimizações ligadas, porém, sem otimizações (\textit{debug}), as listas
+otimizações ligadas; sem otimizações (\textit{debug}), as listas
 encadeadas superam \textit{good-local-array}
 (figura \ref{fig:collection find debug}).
 
@@ -720,10 +719,11 @@ encadeadas superam \textit{good-local-array}
 Algumas conclusões interessantes podem ser feitas. Por exemplo, a partir do
 resultado de \textit{bad-local-array} e \textit{worse-local-array}, pode-se
 concluir que, se as páginas já estão sendo saltadas em uma grande quantidade
-($16$ no nosso caso), não faz muita diferença intercalar entre duas metades de
-um \textit{array} ou não, diferente do esperado. Uma explicação para tal é
-que o TLB do sistema não leva em conta a proximidade das páginas, na verdade,
-a vantagem está em endereços próximos em uma mesma página.
+($16$ nesse caso), não faz muita diferença intercalar entre duas metades de
+um \textit{array} ou não, diferente do que se foi assumido inicialmente.
+Uma explicação para tal é que o TLB do sistema não leva em conta a proximidade
+das páginas, na verdade; a vantagem está em endereços serem próximos em uma
+mesma página.
 
 Além disso, pode-se verificar que, apesar do \textit{sorted-array} saltar entre
 endereços muito distantes, a complexidade logarítimica da busca binária
@@ -736,14 +736,20 @@ páginas como o esperado.
 
 Outro fato interessante é que a vantagem de uma árvore ordenada sobre uma
 árvore não-ordenada diminui e torna-se quase nula à medida em que se aumenta o
-número de páginas em função do tamanho da entrada na operação de incremento.
+número de páginas em função do tamanho da entrada, na operação de incremento.
 É tentador associar isso à ideia de que a complexidade do algoritmo pode ser
 irrelevante diante de uma alta quantidade de \textit{page misses} na TLB, mas na
 realidade as duas complexidades não estão muito distantes: $O(max(m, n+m))$ versus
 $O(n + m)$, onde $n$ é o tamanho da árvore, $m$ é o valor solicitado, e contam
 como passos cada iteração.
 
-
+Por fim, pode-se afirmar que localização importa, dada a diferença entre
+\textit{good-local-array} e \textit{bad-} e \textit{worse-local-array}: a perda
+de performance dos dois últimos foi considerável em comparação com o primeiro.
+Além do mais, mesmo com a questão da localidade, a complexidade de algoritmos
+tem peso para entradas suficientemente grades, por exemplo, observando a
+performance de \textit{with-order-tree} e \textit{sorted-array} na operação
+\textit{find}.
 
 \nocite{*}
 \printbibliography
